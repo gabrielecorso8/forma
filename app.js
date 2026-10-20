@@ -31,45 +31,56 @@
   const showcaseGrid = $('.showcase-grid');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const aspectOf = w => w.image ? w.image.width / w.image.height : 0.5;
-  const showcaseWorks = works;
-  const sceneCount = showcaseWorks.length;
-  const cycleIndex = (index, length) => ((index % length) + length) % length;
-  let showcaseIndex = 0, showcaseTimer = null, showcaseChanging = false;
-  const showcaseInterval = 3000;
+  const squareWorks = works.filter(w => aspectOf(w) >= 0.95);
+  const portraitWorks = works.filter(w => Math.abs(aspectOf(w) - 2 / 3) < 0.02);
+  const initialCollage = [
+    squareWorks[0], squareWorks[1], squareWorks[2],
+    squareWorks[3], squareWorks[4], squareWorks[5],
+    portraitWorks[0], portraitWorks[1], portraitWorks[2], portraitWorks[3]
+  ].filter(Boolean);
+  let collageSlots = [], showcaseTimers = new Map();
   let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
   function canShowcaseAdvance() {
-    return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement) && sceneCount>1;
+    return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement);
   }
   function scheduleShowcase() {
-    clearTimeout(showcaseTimer);
-    showcaseTimer = null;
-    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),showcaseInterval);
+    showcaseTimers.forEach(timer => clearTimeout(timer));
+    showcaseTimers.clear();
+    if (!canShowcaseAdvance()) return;
+    collageSlots.forEach(slot => {
+      const delay = 3000 + Math.random() * 3000;
+      showcaseTimers.set(slot.id, setTimeout(() => rotateCollageSlot(slot), delay));
+    });
   }
-  function showcaseWork(w) {
-    const n = works.indexOf(w);
-    const motion = `--entry-duration:${reducedMotion.matches ? 0 : 1100}ms;--entry-hue:${(n%5)-2}`;
-    return `<figure class="showcase-work" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">${icon('external-arrow')}</span></span></button></figure>`;
+  function collageTile(w, index, shape) {
+    return `<button class="collage-tile ${shape}" data-detail="${esc(w.id)}" data-slot="${index}" aria-label="Osserva ${esc(w.title)}">${image(w, 'meet')}</button>`;
   }
-  function renderShowcase(manual=false) {
-    const current = showcaseWorks[cycleIndex(showcaseIndex, sceneCount)];
-    $('#showcase-pair').innerHTML = current ? showcaseWork(current) : '';
-    const position = cycleIndex(showcaseIndex, sceneCount) + 1;
-    $('#showcase-count').textContent = `${String(position).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
-    $('#showcase-count').setAttribute('aria-label',`Esposizione ${position} di ${sceneCount}`);
-    if(manual) $('#showcase-announcement').textContent = current?.title || '';
-    showcaseGrid.classList.remove('is-changing');
-    showcaseChanging = false;
+  function renderShowcase() {
+    collageSlots = initialCollage.map((work, index) => ({
+      id: `collage-${index}`,
+      work,
+      pool: index < 6 ? squareWorks : portraitWorks,
+      shape: index < 6 ? 'collage-square' : 'collage-portrait'
+    }));
+    $('#showcase-pair').innerHTML = collageSlots.map((slot, index) => collageTile(slot.work, index, slot.shape)).join('');
     scheduleShowcase();
   }
-  function moveShowcase(direction,automatic=false) {
-    if(showcaseChanging || (automatic && !canShowcaseAdvance())) return;
-    clearTimeout(showcaseTimer);
-    showcaseChanging = true;
-    showcaseGrid.classList.add('is-changing');
-    setTimeout(()=>{
-      showcaseIndex+=direction;
-      renderShowcase(!automatic);
-    },reducedMotion.matches?0:420);
+  function rotateCollageSlot(slot) {
+    if (!canShowcaseAdvance()) return;
+    const used = new Set(collageSlots.filter(other => other !== slot).map(other => other.work.id));
+    const choices = slot.pool.filter(work => work.id !== slot.work.id && !used.has(work.id));
+    const next = choices[Math.floor(Math.random() * choices.length)];
+    if (!next) return;
+    slot.work = next;
+    const tile = $(`[data-slot="${collageSlots.indexOf(slot)}"]`, showcaseGrid);
+    if (!tile) return;
+    tile.classList.remove('is-entering');
+    tile.dataset.detail = next.id;
+    tile.setAttribute('aria-label', `Osserva ${next.title}`);
+    tile.innerHTML = image(next, 'meet');
+    requestAnimationFrame(() => tile.classList.add('is-entering'));
+    const delay = 3000 + Math.random() * 3000;
+    showcaseTimers.set(slot.id, setTimeout(() => rotateCollageSlot(slot), delay));
   }
   function updateShowcasePlayback() {
     $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
@@ -110,7 +121,7 @@
     if (dialog.dataset.view === 'saved') renderSaved();
     notify(saved.has(id) ? 'Opera aggiunta alle tue preferite' : 'Opera rimossa dalle preferite');
   }
-  function open(view, html) { clearTimeout(showcaseTimer); dialog.classList.toggle('viewer', view === 'detail'); dialog.dataset.view = view; body.innerHTML = html; if (!dialog.open) dialog.showModal(); const heading = $('#dialog-title'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({preventScroll:true}); } dialog.scrollTop = 0; }
+  function open(view, html) { dialog.classList.toggle('viewer', view === 'detail'); dialog.dataset.view = view; body.innerHTML = html; if (!dialog.open) dialog.showModal(); scheduleShowcase(); const heading = $('#dialog-title'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({preventScroll:true}); } dialog.scrollTop = 0; }
   function detail(id) {
     const index = works.findIndex(w => w.id === id); if (index < 0) return;
     viewState = {index, zoom:1, x:0, y:0, dark:viewState.dark};
@@ -231,7 +242,7 @@
   document.addEventListener('click', async e => {
     const target = e.target.closest('button,a'); if (!target) return;
     if (target.dataset.view) return viewerAction(target.dataset.view);
-    if(target.dataset.showcase) { if(target.dataset.showcase==='toggle'){showcasePlaying=!showcasePlaying;updateShowcasePlayback();}else moveShowcase(target.dataset.showcase==='next'?1:-1);return; }
+    if(target.dataset.showcase) { if(target.dataset.showcase==='toggle'){showcasePlaying=!showcasePlaying;updateShowcasePlayback();}return; }
     if (target.dataset.save) { toggleSaved(target.dataset.save); if(dialog.dataset.view === 'detail') { const w = works.find(w=>w.id===target.dataset.save); if(w) target.innerHTML = `${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}`; } return; }
     if (target.dataset.detail) return detail(target.dataset.detail);
     if (target.dataset.inquire) return contactForm(target.dataset.inquire);
