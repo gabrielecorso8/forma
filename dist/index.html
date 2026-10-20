@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Forma. Ventuno opere da osservare, una selezione personale, un contatto diretto con la galleria.">
+<meta name="theme-color" content="#f4f3ef"><title>FORMA — Opere</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<link rel="preload" href="assets/collection.jpg" as="image">
+<script src="config.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Vai al contenuto</a>
+<header class="header">
+  <a class="brand" href="#inizio" aria-label="Forma, pagina iniziale">FORMA<span>Galleria d’arte</span></a>
+  <nav aria-label="Navigazione principale"><a href="#opere">Opere</a><a href="#preferenze">Preferenze</a><a href="#galleria">Galleria</a></nav>
+  <div class="header-actions"><button id="text-size" class="text-size" aria-pressed="false" aria-label="Ingrandisci i testi">A+</button><button class="saved-nav" data-action="saved">Selezione <span class="count">0</span></button><button class="contact-link" data-action="contact">Contatti <span aria-hidden="true">↗</span></button></div>
+</header>
+<main id="main">
+  <section class="exhibition" id="inizio" aria-labelledby="hero-title">
+    <div class="exhibition-rail">
+      <div class="rail-top"><p class="label">In evidenza / 01</p><p class="exhibition-heading">Studi<br> sul colore.</p></div>
+      <div class="exhibition-caption"><span id="hero-number" class="work-number">01 — 03</span><h1 id="hero-title">Dialogo in blu</h1><p id="hero-medium">Tecnica mista su tela<br>50 × 100 cm</p><button class="line-link" id="hero-open" data-detail="forma-01">Osserva l’opera <span aria-hidden="true">↗</span></button></div>
+      <div class="exhibition-index" role="group" aria-label="Scegli l’opera in primo piano"><button data-exhibit="0" aria-label="01, Dialogo in blu" aria-pressed="true">01</button><button data-exhibit="1" aria-label="02, Equilibrio naturale" aria-pressed="false">02</button><button data-exhibit="2" aria-label="03, Paesaggio interiore" aria-pressed="false">03</button></div>
+    </div>
+    <div class="exhibition-stage"><button class="exhibition-art" id="hero-art" data-detail="forma-01" aria-label="Apri Dialogo in blu nella vista immersiva"></button><span class="detail-caption">Opera intera</span><button class="expand-art" id="hero-expand" data-detail="forma-01">Osserva l’opera <span aria-hidden="true">↗</span></button></div>
+  </section>
+  <div class="exhibition-bottom"><span>FORMA / Progetto espositivo</span><a href="#opere">Indice delle opere <span aria-hidden="true">↓</span></a><span id="collection-summary">21 opere, 3 categorie.</span></div>
+  <section class="collection container" id="opere" aria-labelledby="collection-title">
+    <div class="section-top"><h2 id="collection-title">Le opere<span class="sup">01—21</span></h2><p>Apri un’opera per osservarla da vicino.<br>Salva quelle che vuoi ritrovare.</p></div>
+    <div class="collection-toolbar"><div class="filters" role="group" aria-label="Filtra le opere per stile"><button class="filter active" data-filter="all" aria-pressed="true">Tutte</button><button class="filter" data-filter="Astratto" aria-pressed="false">Astratto</button><button class="filter" data-filter="Geometrico" aria-pressed="false">Geometrico</button><button class="filter" data-filter="Paesaggio" aria-pressed="false">Paesaggio</button></div><span id="results-count" aria-live="polite">3 opere</span></div>
+    <div id="art-grid" class="art-grid"></div><div class="catalog-pagination"><p id="catalog-progress" aria-live="polite"></p><button class="button secondary" data-action="more-works">Mostra altre opere</button></div>
+    <div class="collection-bottom"><p>La tua selezione resta su questo dispositivo.</p><button class="line-link" data-action="saved">Rivedi la selezione <span aria-hidden="true">↗</span></button></div>
+  </section>
+  <section id="preferenze" class="preferences container"><div class="section-index">01 / La tua ricerca</div><div><h2>Una selezione<br>personale.</h2><div class="preference-bottom"><p>Stile, budget, destinazione.<br>Tre indicazioni per preparare una richiesta<br>alla galleria, con le opere che hai scelto.</p><button class="button" data-action="quiz">Imposta le preferenze <span aria-hidden="true">↗</span></button></div></div></section>
+  <section id="galleria" class="gallery-note container"><div class="section-index">02 / La galleria</div><div><h2>Uno spazio per guardare.</h2><p>Le opere si possono osservare a tutta pagina, raccogliere nella propria selezione e discutere con la galleria. Per informazioni su tecniche, dimensioni o una visita, il contatto è diretto.</p><button class="line-link" data-action="contact">Informazioni e appuntamenti <span aria-hidden="true">↗</span></button></div></section>
+  <section class="contact-section container"><p class="label">03 / Informazioni sulle opere</p><button class="contact-title" data-action="contact">Contatti<span aria-hidden="true">↗</span></button><div class="contact-foot"><p>Una domanda su un’opera.<br>Una visita in galleria.</p><button class="line-link" data-action="saved">La tua selezione <span class="count">0</span></button></div></section>
+</main>
+<footer class="container"><div class="footer-wordmark" aria-hidden="true">FORMA</div><div class="footer-bottom"><span>© <span id="year"></span> Forma</span><span>Fac simile · Opere dimostrative generate con ImageGen 2.5</span><button class="plain" data-action="privacy">Privacy e dati</button><a href="#inizio">Torna all’inizio ↑</a></div></footer>
+<div class="mobile-bar"><button data-action="saved">Selezione <span class="count">0</span></button><button data-action="contact">Contatti <span aria-hidden="true">↗</span></button></div>
+<dialog id="dialog" aria-labelledby="dialog-title"><button class="close" aria-label="Chiudi finestra">Chiudi <span aria-hidden="true">×</span></button><div id="dialog-body"></div></dialog><div class="toast" role="status" aria-live="polite"></div>
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg"><symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol><symbol id="heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.6 5.6 0 0 0-8 .1l-.8.8-.8-.8a5.6 5.6 0 0 0-8 7.9L12 21l8.8-8.4a5.6 5.6 0 0 0 0-8Z"/></symbol><symbol id="chat" viewBox="0 0 24 24"><path d="M21 11.5a9 9 0 0 1-9 9 10 10 0 0 1-4-.9L3 21l1.5-4.7A9 9 0 1 1 21 11.5Z"/><path d="M8 10h8m-8 4h5"/></symbol><symbol id="bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4Z"/></symbol><symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v7m0-11v1"/></symbol></svg>
+</body></html>

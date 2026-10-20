@@ -1,0 +1,10 @@
+# Local credentials and generated working files
+.env
+.env.*
+!.env.example
+.openai/
+node_modules/
+work/
+outputs/
+.DS_Store
+Thumbs.db
