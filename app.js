@@ -32,14 +32,11 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const aspectOf = w => w.image ? w.image.width / w.image.height : 0.5;
   const portraitWorks = works.filter(w => aspectOf(w) < 0.8);
-  const mainWorks = works.filter(w => aspectOf(w) >= 0.8);
-  const showcaseScenes = [];
-  let pair = [];
-  const flushPair = () => { if(pair.length) { showcaseScenes.push(pair); pair = []; } };
-  mainWorks.forEach(w => { if(aspectOf(w) > 1.2) { flushPair(); showcaseScenes.push([w]); } else { pair.push(w); if(pair.length===2) flushPair(); } });
-  flushPair();
+  const mainWorks = works.filter(w => aspectOf(w) >= 0.8 && aspectOf(w) <= 1.2);
+  const showcaseScenes = mainWorks.map(w => [w]);
   if(!showcaseScenes.length) showcaseScenes.push([]);
   const sceneCount = Math.max(showcaseScenes.length, portraitWorks.length);
+  const cycleIndex = (index, length) => ((index % length) + length) % length;
   const showcaseInterval = Math.max(6000, Number(config.showcaseInterval) || 9000);
   let showcaseIndex = 0, showcaseTimer = null, showcaseChanging = false;
   let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
@@ -56,19 +53,18 @@
     const offsets = [[-12,0],[0,14],[12,0],[0,-12],[-8,8],[8,-8]];
     const [x,y] = offsets[n % offsets.length];
     const motion = `--entry-x:${x}px;--entry-y:${y}px;--entry-scale:${n%3===0?0.985:1};--entry-duration:${700+n*11}ms;--entry-delay:${slot*90+(n*7)%90}ms`;
-    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><small>${esc(w.category)} / ${esc(w.size)}</small><span class="showcase-open-mark" aria-hidden="true">↗</span></span></button></figure>`;
+    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">↗</span></span></button></figure>`;
   }
   function renderShowcase(manual=false) {
-    const current = showcaseScenes[showcaseIndex % showcaseScenes.length];
-    const portrait = portraitWorks.length ? portraitWorks[showcaseIndex % portraitWorks.length] : null;
+    const current = showcaseScenes[cycleIndex(showcaseIndex, showcaseScenes.length)];
+    const portrait = portraitWorks.length ? portraitWorks[cycleIndex(showcaseIndex, portraitWorks.length)] : null;
     $('#showcase-pair').innerHTML = current.map((w,i)=>showcaseWork(w,i)).join('');
-    $('#showcase-pair').classList.toggle('is-single',current.length===1);
-    $('#showcase-pair').classList.toggle('is-landscape',current.length===1 && aspectOf(current[0])>1.2);
-    $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,2,true) : '';
+    $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,1,true) : '';
     showcaseGrid.classList.toggle('without-portrait',!portrait);
     showcaseGrid.classList.toggle('without-main',!current.length);
-    $('#showcase-count').textContent = `${String(showcaseIndex+1).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
-    $('#showcase-count').setAttribute('aria-label',`Esposizione ${showcaseIndex+1} di ${sceneCount}`);
+    const position = cycleIndex(showcaseIndex, sceneCount) + 1;
+    $('#showcase-count').textContent = `${String(position).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
+    $('#showcase-count').setAttribute('aria-label',`Esposizione ${position} di ${sceneCount}`);
     if(manual) $('#showcase-announcement').textContent = [...current,portrait].filter(Boolean).map(w=>w.title).join(', ');
     showcaseGrid.classList.remove('is-changing');
     showcaseChanging = false;
@@ -79,7 +75,7 @@
     clearTimeout(showcaseTimer);
     showcaseChanging = true;
     showcaseGrid.classList.add('is-changing');
-    setTimeout(()=>{showcaseIndex=(showcaseIndex+direction+sceneCount)%sceneCount;renderShowcase(!automatic);},reducedMotion.matches?0:180);
+    setTimeout(()=>{showcaseIndex+=direction;renderShowcase(!automatic);},reducedMotion.matches?0:180);
   }
   function updateShowcasePlayback() {
     $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
@@ -104,7 +100,7 @@
     const matched = works.filter(w => filter === 'all' || w.category === filter);
     const visible = matched.slice(0,visibleLimit);
     $('#art-grid').dataset.filtered = filter !== 'all';
-    $('#art-grid').innerHTML = visible.map(w => `<article class="art-card${w.image ? ' square-work' : ''}"><button class="art-img" data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}">${image(w)}</button><div class="card-top"><div><p class="card-category">${String(works.indexOf(w) + 1).padStart(2,'0')} / ${esc(w.category)}</p><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3></div>${saveButton(w)}</div><p class="card-details">${esc(w.medium)}<br>${esc(w.size)}</p><button class="detail-link" data-detail="${esc(w.id)}">Osserva l’opera ${icon('arrow')}</button></article>`).join('');
+    $('#art-grid').innerHTML = visible.map(w => `<article class="art-card${aspectOf(w) >= 0.8 ? ' square-work' : ' portrait-work'}"><button class="art-img" data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}">${image(w)}</button><div class="card-top"><div><p class="card-category">${String(works.indexOf(w) + 1).padStart(2,'0')} / ${esc(w.category)}</p><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3></div>${saveButton(w)}</div><p class="card-details">${esc(w.medium)}<br>${esc(w.size)}</p><button class="detail-link" data-detail="${esc(w.id)}">Osserva l’opera ${icon('arrow')}</button></article>`).join('');
     $('#results-count').textContent = `${matched.length} ${matched.length === 1 ? 'opera' : 'opere'}`;
     $('#catalog-progress').textContent = `Mostrate ${visible.length} di ${matched.length} opere`;
     const more = $('[data-action="more-works"]');

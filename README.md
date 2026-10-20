@@ -2,7 +2,7 @@
 
 [Sito su GitHub Pages](https://gabrielecorso8.github.io/forma/)
 
-Vetrina artistica minimale con 21 opere dimostrative, preferenze personali e contatto guidato. HTML, CSS e JavaScript statici, senza dipendenze o compilazione.
+Vetrina artistica minimale con 30 opere dimostrative, preferenze personali e contatto guidato. HTML, CSS e JavaScript statici, senza dipendenze o compilazione.
 
 ## Avvio locale
 
@@ -16,7 +16,7 @@ Aprire **http://127.0.0.1:8080**. In alternativa, pubblicare i file della reposi
 
 ## Funzioni
 
-- 21 opere: 7 Astratto, 7 Geometrico e 7 Paesaggio.
+- 30 opere: 10 Astratto, 10 Geometrico e 10 Paesaggio.
 - Filtri con conteggi e caricamento progressivo del catalogo.
 - Opere intere in apertura, senza ingrandimento automatico.
 - Sala di osservazione con zoom, trascinamento, fondo chiaro/scuro e navigazione fra opere.
@@ -51,4 +51,4 @@ La pubblicazione usa il ramo `main` e la cartella `/(root)`. `index.html`, JavaS
 
 ## Vetrina dinamica
 
-La testata mostra i tre verticali in rotazione sulla destra e i diciotto quadrati a coppie nell’area principale: 9 esposizioni complessive. Ogni opera ha una variazione leggera di entrata. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale. Il campo `showcaseInterval` in `config.js` imposta il tempo fra esposizioni, in millisecondi (9.000 predefiniti; minimo 6.000). I futuri lavori orizzontali con metadati `image.width / image.height > 1.2` occupano da soli l’area principale.
+La testata mostra un quadrato a sinistra e un verticale a destra. I diciotto quadrati e i dodici verticali ruotano su cicli indipendenti: i verticali continuano la propria sequenza anche quando ricomincia quella dei quadrati. Nelle didascalie compare solo il titolo. Nove verticali nuovi, tre per categoria, ampliano la selezione. Ogni opera ha una variazione leggera di entrata. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale. Il campo `showcaseInterval` in `config.js` imposta il tempo fra esposizioni, in millisecondi (9.000 predefiniti; minimo 6.000).

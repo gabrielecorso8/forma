@@ -4,17 +4,17 @@ Prototipo navigabile e personalizzabile per una galleria che accompagna il visit
 
 ## Direzione del progetto
 
-Un allestimento centrato sulle opere: sans serif Helvetica/Arial di sistema, fondo neutro, indice numerato, dettagli pittorici a tutta larghezza e catalogo asimmetrico. Nessun corsivo decorativo, slogan promozionale o carosello automatico. Contatto e selezione restano espliciti, senza account.
+Un allestimento centrato sulle opere: sans serif Helvetica/Arial di sistema, fondo neutro, indice numerato, dettagli pittorici a tutta larghezza e catalogo asimmetrico. Tipografia essenziale, fondi neutri e comandi espliciti. Contatto e selezione restano espliciti, senza account.
 
-La pagina iniziale mostra l’opera intera, senza ritaglio ingrandito. Le dimensioni iniziali sono limitate alla risoluzione nativa del pannello: non si allarga un dettaglio da 512 pixel sull’intera larghezza dello schermo. «Osserva l’opera» apre la sala a tutta pagina. + e − portano lo zoom volontario dal 100% al 300%; trascinamento e ripristino esplorano il dettaglio. Il fondo è commutabile e si può passare fra tutte le 21 opere, anche con le frecce della tastiera. Escape chiude la sala.
+La pagina iniziale mostra l’opera intera, senza ritaglio ingrandito. Le dimensioni iniziali sono limitate alla risoluzione nativa del pannello: non si allarga un dettaglio da 512 pixel sull’intera larghezza dello schermo. «Osserva l’opera» apre la sala a tutta pagina. + e − portano lo zoom volontario dal 100% al 300%; trascinamento e ripristino esplorano il dettaglio. Il fondo è commutabile e si può passare fra tutte le 30 opere, anche con le frecce della tastiera. Escape chiude la sala.
 
-Il catalogo comprende 21 opere: 7 Astratto, 7 Geometrico e 7 Paesaggio. Sono mostrate inizialmente 9 schede, poi 18 e 21 con il pulsante «Mostra altre opere». I filtri di categoria mostrano tutti e 7 i lavori corrispondenti. La testata mostra i diciotto quadrati a coppie nell’area principale e fa ruotare i tre verticali sulla destra, per nove esposizioni complessive. Ogni opera è cliccabile e mantiene il proprio collegamento alla sala di osservazione.
+Il catalogo comprende 30 opere: 10 Astratto, 10 Geometrico e 10 Paesaggio. Sono mostrate inizialmente 9 schede, poi 18, 27 e 30 con il pulsante «Mostra altre opere». I filtri di categoria mostrano i 10 lavori corrispondenti. La testata mostra un solo quadrato a sinistra e un solo verticale a destra, con didascalie dedicate al solo titolo. Diciotto quadrati e dodici verticali ruotano su cicli indipendenti con passaggi lenti, pausa e comandi manuali. Nove verticali aggiuntivi comprendono tre nuove opere per ciascuna categoria. Ogni opera è cliccabile e mantiene il proprio collegamento alla sala di osservazione.
 
 L’elemento distintivo è il percorso guidato: stile, budget indicativo e occasione. Il sito suggerisce opere secondo gli stili selezionati e trasferisce tutte le preferenze al riepilogo di contatto. Budget e occasione sono informazioni per la galleria: non esiste un motore di valutazione economica.
 
 ## Funzioni realizzate
 
-- Catalogo di 21 opere dimostrative, filtri con conteggi, caricamento progressivo e sala di osservazione con zoom, trascinamento e navigazione fra opere.
+- Catalogo di 30 opere dimostrative, filtri con conteggi, caricamento progressivo e sala di osservazione con zoom, trascinamento e navigazione fra opere.
 - Preferite conservate nel browser del dispositivo.
 - Percorso di preferenze in tre passaggi, modificabile.
 - Modulo di contatto con recapito email, telefono, WhatsApp o profilo Facebook. La scelta WhatsApp richiede il numero del visitatore e compare nel riepilogo.
@@ -49,7 +49,7 @@ Gli esempi di recapiti sopra non sono recapiti utilizzabili: inserire quelli ver
 
 Inserendo un’email compare «Apri la tua email». Il telefono abilita il collegamento per chiamare e il link Facebook apre la pagina o Messenger. Il campo `whatsapp` deve contenere il numero verificato della galleria in formato internazionale: se il visitatore seleziona WhatsApp, nel riepilogo compare «Apri WhatsApp» con il messaggio precompilato. Senza un numero configurato, la demo prepara soltanto il riepilogo copiabile. L’invio finale resta sempre un’azione del visitatore nella sua applicazione; nessun messaggio viene inviato automaticamente.
 
-Le prime tre opere usano `collection.jpg` con `panel: 0`, `1`, `2`. Le 18 nuove opere usano tre atlanti da 1536 × 1024 pixel, uno per categoria, con sei pannelli quadrati da 512 × 512 ciascuno. I metadati `image` definiscono sorgente, coordinate e dimensioni. `image()` usa viewport e maschera SVG per isolare il pannello senza modificare i file; non si tratta di varianti dello stesso dipinto. Per un catalogo commerciale sostituire gli atlanti con fotografie singole e adeguare `image()`.
+Le prime tre opere usano `collection.jpg` con `panel: 0`, `1`, `2`. Le 18 opere quadrate usano tre atlanti da 1536 × 1024 pixel, uno per categoria, con sei pannelli quadrati da 512 × 512 ciascuno. I metadati `image` definiscono sorgente, coordinate e dimensioni. `image()` usa viewport e maschera SVG per isolare il pannello senza modificare i file; non si tratta di varianti dello stesso dipinto. I nove verticali aggiuntivi sono immagini singole in `assets/verticali/`, con metadati che descrivono l’intera immagine. Per un catalogo commerciale sostituire gli asset con fotografie delle opere.
 
 Per una messa online commerciale: sostituire il catalogo, inserire identità e recapiti del cliente, orari e indirizzo, predisporre l’informativa privacy appropriata e collegare un backend solo se si desidera ricevere richieste direttamente dal sito.
 
@@ -62,7 +62,7 @@ La repository GitHub esclude la cartella `.openai`, che contiene i metadati inte
 ## Verifiche effettuate
 
 - Sintassi JavaScript verificata con `node --check`.
-- Browser desktop: 9 schede iniziali, 18 e 21 dopo i due caricamenti; 7 risultati per ciascuna delle tre categorie.
+- Browser desktop: 9 schede iniziali, caricamento progressivo del catalogo; filtri per ciascuna delle tre categorie.
 - Scheda della ventunesima opera e ritaglio corretto dell’ultimo pannello del nuovo atlante Paesaggio.
 - Modulo WhatsApp con numero dedicato e riepilogo che conserva canale e recapito.
 - Percorso sala di osservazione → salvataggio → contatto con l’opera scelta.
@@ -86,3 +86,9 @@ Riferimenti esaminati: [Vistamare](https://vistamare.com/), [ZERO…](https://ga
 ## Anteprime nel modulo contatti
 
 Le opere incluse nella richiesta compaiono con miniatura intera e titolo, in due colonne su desktop e una su telefono. Il contatto diretto dalla scheda mostra l’opera corrente; il contatto generale mostra le opere salvate. Il riepilogo testuale mantiene i titoli per copia, download e condivisione.
+
+## Aggiornamento vetrina: un quadrato e un verticale
+
+30 opere complessive, 10 per categoria. I titoli della vetrina hanno uno spazio dedicato e non mostrano categoria o misure. Le nuove immagini verticali sono generate singolarmente con lo strumento integrato ImageGen, salvate in `assets/verticali/`; prompt in `PROMPT-IMMAGINI.md`. Il riconoscimento del formato nel catalogo usa il rapporto fra larghezza e altezza.
+
+Verifica dell’aggiornamento: 18 passaggi manuali della vetrina, sempre due opere visibili, 30 opere distinte e tutti i 12 verticali raggiunti; didascalie senza metadati. Controllati avanzamento automatico, navigazione avanti/indietro, tre filtri da 10 risultati, apertura di «La strada bianca», salvataggio e anteprima con titolo nel modulo contatti. A 320 px con testi ingranditi non sono stati osservati overflow o titoli troncati. Console senza errori o avvisi durante la verifica.

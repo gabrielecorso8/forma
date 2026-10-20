@@ -33,7 +33,7 @@ dialog.viewer{position:fixed;inset:0;margin:0;width:100%;max-width:none;height:1
 .large-text .contact-work-title{font-size:18px}
 @media(max-width:500px){.contact-works{grid-template-columns:1fr;gap:12px}.contact-work-image{width:52px;height:62px;flex-basis:52px}}
 
-/* Vetrina: due opere nell’area principale, un verticale a destra. */
+/* Vetrina: un quadrato e un verticale, con titoli dedicati. */
 .showcase{padding:30px 36px 0}
 .showcase-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:28px}
 .showcase-heading .label{font-size:11px;margin-bottom:8px}
@@ -43,20 +43,18 @@ dialog.viewer{position:fixed;inset:0;margin:0;width:100%;max-width:none;height:1
 .showcase-controls #showcase-count{min-width:54px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
 .showcase-controls .showcase-toggle{display:flex;align-items:center;gap:12px;border-left:1px solid var(--line);padding-left:22px;margin-left:4px;font-size:14px;min-width:112px}
 #showcase-play-icon{font-size:19px;width:18px;text-align:center}
-.showcase-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(185px,.85fr);gap:18px;height:clamp(430px,calc(100svh - 270px),740px)}
+.showcase-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;height:clamp(490px,calc(100svh - 270px),780px)}
 .showcase-main{background:#e6e4dd;min-width:0;min-height:0;overflow:hidden}
-.showcase-pair{height:100%;display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:28px;align-items:stretch}
-.showcase-pair.is-single{grid-template-columns:1fr;padding-inline:40px}
-.showcase-portrait{padding:28px 24px;background:#dcdad2;min-width:0;min-height:0;overflow:hidden}
+.showcase-pair{height:100%;display:grid;grid-template-columns:1fr;padding:30px 36px;align-items:stretch}
+.showcase-portrait{padding:30px 36px;background:#dcdad2;min-width:0;min-height:0;overflow:hidden}
 #showcase-portrait{height:100%}
 .showcase-work{height:100%;min-height:0;min-width:0;margin:0;animation:showcase-arrive var(--entry-duration,800ms) cubic-bezier(.2,.65,.3,1) var(--entry-delay,0ms) both}
-.showcase-work>button{height:100%;width:100%;padding:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:22px;text-align:left;cursor:zoom-in}
+.showcase-work>button{height:100%;width:100%;padding:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:28px;text-align:left;cursor:zoom-in}
 .showcase-picture{display:flex;align-items:center;justify-content:center;min-height:0;min-width:0;overflow:hidden}
 .showcase-picture .artwork{width:min(100%,var(--native-width));height:min(100%,var(--native-height));flex-shrink:1}
-.showcase-work-caption{position:relative;display:block;padding-right:22px;min-height:49px}
-.showcase-work-caption strong{font-size:16px;line-height:1.25;font-weight:400;display:block;margin-bottom:7px}
-.showcase-work-caption small{font-size:11px;line-height:1.4;color:var(--muted);display:block}
-.showcase-open-mark{position:absolute;right:0;top:0;font-size:21px}
+.showcase-work-caption{position:relative;display:block;padding:0 32px 4px 0;min-height:68px}
+.showcase-work-caption strong{font-size:25px;line-height:1.25;font-weight:400;letter-spacing:-.025em;display:block;overflow-wrap:break-word}
+.showcase-open-mark{position:absolute;right:0;top:0;font-size:24px}
 .showcase-grid.is-changing .showcase-work{opacity:0;transition:opacity 160ms ease;animation:none}
 .showcase-grid.without-portrait{grid-template-columns:1fr}.without-portrait .showcase-portrait{display:none}
 .showcase-grid.without-main{grid-template-columns:1fr}.without-main .showcase-main{display:none}
@@ -64,11 +62,12 @@ dialog.viewer{position:fixed;inset:0;margin:0;width:100%;max-width:none;height:1
 .showcase-foot>span{color:var(--muted)}
 .showcase-foot a{display:inline-flex;align-items:center;gap:25px;min-height:36px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.large-text .showcase-work-caption strong{font-size:20px}.large-text .showcase-work-caption small{font-size:14px}
+.large-text .showcase-work-caption strong{font-size:29px}
+.large-text .showcase-work-caption{min-height:80px}
 .large-text .showcase-controls .showcase-toggle{font-size:18px}
+.art-grid .art-card.portrait-work .art-img{aspect-ratio:2/3}
 @keyframes showcase-arrive{from{opacity:0;transform:translate3d(var(--entry-x,0),var(--entry-y,10px),0) scale(var(--entry-scale,1))}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
-@media(max-width:1050px){.showcase{padding-inline:25px}.showcase-grid{grid-template-columns:minmax(0,2fr) minmax(175px,.85fr)}.showcase-pair{gap:22px;padding:24px 20px}.showcase-portrait{padding:24px 20px}.showcase-work-caption strong{font-size:15px}}
-@media(max-width:760px){.showcase{padding:25px 20px 0}.showcase-heading h1{font-size:32px}.showcase-controls{gap:8px}.showcase-controls .showcase-toggle{padding-left:13px;min-width:99px;gap:9px}.showcase-grid{grid-template-columns:minmax(0,1.7fr) minmax(140px,.8fr);height:470px;gap:12px}.showcase-pair{padding:20px 16px;gap:16px}.showcase-portrait{padding:20px 16px}.showcase-work-caption strong{font-size:14px}.showcase-work-caption small{font-size:10px}.showcase-foot>span{display:none}.showcase-foot{font-size:11px;gap:20px}}
-@media(max-width:580px){.showcase-heading{align-items:flex-start;flex-direction:column;gap:20px;margin-bottom:20px}.showcase-heading h1{font-size:35px}.showcase-controls{width:100%;justify-content:space-between;gap:10px}.showcase-controls .showcase-toggle{margin-left:auto;padding-left:20px;min-width:120px;font-size:14px}.showcase-grid{grid-template-columns:1fr;height:auto;gap:12px}.showcase-main{height:280px}.showcase-portrait{height:350px;padding:20px 24px}.showcase-pair{padding:18px;gap:20px}.showcase-work-caption strong{font-size:14px}.showcase-work-caption small{font-size:10px}.showcase-work>button{gap:15px}.showcase-portrait .showcase-work{max-width:260px;margin-inline:auto}.showcase-work-caption{padding-right:18px;min-height:47px}.showcase-foot{align-items:flex-start;font-size:12px;gap:22px;padding-block:18px}.showcase-foot p{max-width:180px}.showcase-foot a{flex-shrink:0;gap:12px;min-height:44px}.showcase-pair.is-landscape{padding-inline:18px}.large-text .showcase-main{height:330px}.large-text .showcase-portrait{height:400px}.large-text .showcase-work-caption strong{font-size:17px}.large-text .showcase-work-caption small{font-size:12px}}
+@media(max-width:1050px){.showcase{padding-inline:25px}.showcase-pair,.showcase-portrait{padding:26px}.showcase-work-caption strong{font-size:23px}}
+@media(max-width:760px){.showcase{padding:25px 20px 0}.showcase-heading h1{font-size:32px}.showcase-controls{gap:8px}.showcase-controls .showcase-toggle{padding-left:13px;min-width:99px;gap:9px}.showcase-grid{height:500px;gap:12px}.showcase-pair,.showcase-portrait{padding:24px 20px}.showcase-work-caption strong{font-size:21px}.showcase-foot>span{display:none}.showcase-foot{font-size:11px;gap:20px}}
+@media(max-width:580px){.showcase-heading{align-items:flex-start;flex-direction:column;gap:20px;margin-bottom:20px}.showcase-heading h1{font-size:35px}.showcase-controls{width:100%;justify-content:space-between;gap:10px}.showcase-controls #showcase-count{min-width:42px}.showcase-controls .showcase-toggle{margin-left:auto;padding-left:14px;min-width:104px;font-size:14px}.showcase-grid{grid-template-columns:1fr;height:auto;gap:12px}.showcase-main{height:390px}.showcase-portrait{height:440px;padding:24px}.showcase-pair{padding:24px}.showcase-work-caption strong{font-size:21px}.showcase-work>button{gap:22px}.showcase-portrait .showcase-work{max-width:300px;margin-inline:auto}.showcase-work-caption{min-height:60px}.showcase-foot{align-items:flex-start;font-size:12px;gap:22px;padding-block:18px}.showcase-foot p{max-width:180px}.showcase-foot a{flex-shrink:0;gap:12px;min-height:44px}.large-text .showcase-main{height:430px}.large-text .showcase-portrait{height:480px}.large-text .showcase-work-caption strong{font-size:25px}}
 @media(prefers-reduced-motion:reduce){.showcase-work{animation:none!important;transform:none!important}.showcase-grid.is-changing .showcase-work{transition:none!important}}
-@media(max-width:580px){.showcase-controls #showcase-count{min-width:42px}.showcase-controls .showcase-toggle{min-width:104px;padding-left:14px}}

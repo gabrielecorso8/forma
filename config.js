@@ -340,6 +340,159 @@ window.FORMA_CONFIG = {
         "sheetWidth": 1536,
         "sheetHeight": 1024
       }
+    },
+    {
+      "id": "forma-22",
+      "title": "Materia chiara",
+      "category": "Astratto",
+      "medium": "Tecnica mista su tela",
+      "size": "60 × 90 cm",
+      "description": "Strati di gesso caldo e terre chiare attraversati da un segno nero. Le abrasioni lasciano affiorare piccoli campi blu.",
+      "image": {
+        "src": "assets/verticali/materia-chiara.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-23",
+      "title": "Arco e colonna",
+      "category": "Geometrico",
+      "medium": "Acrilico su tela",
+      "size": "60 × 90 cm",
+      "description": "Un arco verde oliva dialoga con una colonna scura. Il fondo chiaro e i bordi dipinti a mano attenuano la geometria.",
+      "image": {
+        "src": "assets/verticali/arco-e-colonna.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-24",
+      "title": "Cipresso al mattino",
+      "category": "Paesaggio",
+      "medium": "Olio su tela",
+      "size": "60 × 90 cm",
+      "description": "Un cipresso in primo piano accompagna lo sguardo verso colline lontane. La luce del mattino schiarisce i campi.",
+      "image": {
+        "src": "assets/verticali/cipresso-al-mattino.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-25",
+      "title": "Linea di marea",
+      "category": "Astratto",
+      "medium": "Tecnica mista su tela",
+      "size": "60 × 90 cm",
+      "description": "Blu profondi e verdi spenti si incontrano su una superficie sabbia. Una linea sottile accompagna il movimento della materia.",
+      "image": {
+        "src": "assets/verticali/linea-di-marea.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-26",
+      "title": "Piani verticali",
+      "category": "Geometrico",
+      "medium": "Acrilico su tela",
+      "size": "60 × 90 cm",
+      "description": "Piani sottili in ocra, avorio e nero si alternano lungo la tela. Piccoli scarti interrompono la regolarità delle forme.",
+      "image": {
+        "src": "assets/verticali/piani-verticali.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-27",
+      "title": "Tra le rocce",
+      "category": "Paesaggio",
+      "medium": "Olio su tela",
+      "size": "60 × 90 cm",
+      "description": "Rocce chiare e vegetazione rada incorniciano un tratto di costa. Il mare si perde nella luce opaca del cielo.",
+      "image": {
+        "src": "assets/verticali/tra-le-rocce.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-28",
+      "title": "Rosso profondo",
+      "category": "Astratto",
+      "medium": "Tecnica mista su tela",
+      "size": "60 × 90 cm",
+      "description": "Un campo rosso ossido si apre fra stesure scure e passaggi avorio. I segni conservano il ritmo della pennellata.",
+      "image": {
+        "src": "assets/verticali/rosso-profondo.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-29",
+      "title": "Intersezioni",
+      "category": "Geometrico",
+      "medium": "Acrilico su tela",
+      "size": "60 × 90 cm",
+      "description": "Un cerchio incompleto e due piani rettangolari si sovrappongono. Le campiture nere e salvia emergono dal fondo sabbia.",
+      "image": {
+        "src": "assets/verticali/intersezioni.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
+    },
+    {
+      "id": "forma-30",
+      "title": "La strada bianca",
+      "category": "Paesaggio",
+      "medium": "Olio su tela",
+      "size": "60 × 90 cm",
+      "description": "Una strada chiara attraversa i campi e scompare dietro un poggio. Il paesaggio raccoglie i toni caldi del tardo pomeriggio.",
+      "image": {
+        "src": "assets/verticali/la-strada-bianca.jpg",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 1536,
+        "sheetWidth": 1024,
+        "sheetHeight": 1536
+      }
     }
   ]
 };
