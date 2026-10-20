@@ -56,7 +56,7 @@
     eventResizeObserver?.disconnect();
     $('#home').innerHTML = `
       <section class="showcase" id="inizio" aria-labelledby="hero-title">
-        <div class="showcase-heading"><div><p class="label">${tr('Collezione / Forma','Collection / Forma')}</p><h1 id="hero-title">${tr('Studi sul colore.','Studies in colour.')}</h1></div><button class="showcase-toggle" data-action="toggle-collage"></button></div>
+        <div class="showcase-heading"><div><p class="label">${tr('Collezione / Forma','Collection / Forma')}</p><h1 id="hero-title">${tr('La nostra Collezione','Our Collection')}</h1></div><button class="showcase-toggle" data-action="toggle-collage"></button></div>
         <div id="showcase-collage" class="collage" role="group" aria-label="${tr('Dieci opere della collezione','Ten works from the collection')}"></div>
         <div class="showcase-foot"><p>${tr('Seleziona un’opera per osservarla da vicino.','Select a work to look closer.')}</p><span>${tr('30 opere, 3 collezioni.','30 works, 3 collections.')}</span><a href="#opere">${tr('Esplora le opere','Explore the artworks')} ↓</a></div>
       </section>
