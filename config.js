@@ -5,6 +5,11 @@ window.FORMA_CONFIG = {
   "phone": null,
   "facebook": null,
   "whatsapp": null,
+  "address": null,
+  "openingHours": null,
+  "instagram": null,
+  "x": null,
+  "visitSlots": {},
   "accent": "#20201e",
   "artworks": [
     {

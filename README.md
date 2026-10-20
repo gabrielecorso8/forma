@@ -17,12 +17,13 @@ Aprire **http://127.0.0.1:8080**. In alternativa, pubblicare i file della reposi
 ## Funzioni
 
 - 30 opere: 10 Astratto, 10 Geometrico e 10 Paesaggio.
-- Filtri con conteggi e caricamento progressivo del catalogo.
+- Tutte le 30 opere visibili subito, con filtri per categoria.
 - Opere intere in apertura, senza ingrandimento automatico.
 - Sala di osservazione con zoom, trascinamento, fondo chiaro/scuro e navigazione fra opere.
 - Preferite e preferenze conservate sul dispositivo, senza registrazione.
 - Modulo contatti con miniature e titoli delle opere selezionate.
-- Canali Email, Telefono, WhatsApp e Facebook; riepilogo copiabile o scaricabile.
+- Pannello contatti con indirizzo, orari, telefono, email, WhatsApp e social configurabili.
+- Richiesta di visita su data e orario pubblicati, da confermare via email o WhatsApp.
 - Testi ingrandibili e layout responsive.
 
 ## Personalizzazione
@@ -35,7 +36,7 @@ Aprire **http://127.0.0.1:8080**. In alternativa, pubblicare i file della reposi
 | `app.js` | Filtri, preferite, visualizzatore e modulo |
 | `assets/` | Immagini e risorse locali |
 
-I recapiti sono inizialmente `null`. Configurare quelli verificati della galleria per abilitare email, telefono, Facebook e WhatsApp. Le azioni aprono le applicazioni del visitatore con i dati predisposti; nessun messaggio viene inviato automaticamente.
+I recapiti, l’indirizzo e gli orari sono inizialmente `null`. Inserire in `config.js` i dati verificati della galleria. `visitSlots` contiene le date disponibili e i relativi orari (`"AAAA-MM-GG": ["10:00", "11:30"]`); il sito consente di richiedere soltanto uno di quegli orari e la galleria deve confermare la visita. Le azioni aprono le applicazioni del visitatore con i dati predisposti; nessun messaggio viene inviato automaticamente.
 
 ## Contenuti dimostrativi
 
@@ -51,4 +52,4 @@ La pubblicazione usa il ramo `main` e la cartella `/(root)`. `index.html`, JavaS
 
 ## Vetrina dinamica
 
-La testata mostra un quadrato a sinistra e un verticale a destra. I diciotto quadrati e i dodici verticali ruotano su cicli indipendenti: i verticali continuano la propria sequenza anche quando ricomincia quella dei quadrati. Nelle didascalie compare solo il titolo. Nove verticali nuovi, tre per categoria, ampliano la selezione. Ogni opera ha una variazione leggera di entrata. La sequenza cambia il verticale dopo 5 secondi, poi alterna le due opere ogni 3 secondi. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale.
+La testata mostra un’opera alla volta, intera e mai oltre la risoluzione del file, con il solo titolo sottostante. Le 30 opere ruotano in una sequenza unica ogni 3 secondi; dissolvenza e movimento sono progressivi. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale.

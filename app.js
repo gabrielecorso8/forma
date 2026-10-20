@@ -16,7 +16,7 @@
   const budgetOptions = ['Fino a 1.000 €', '1.000–3.000 €', 'Oltre 3.000 €', 'Ne parliamo insieme'];
   const intentOptions = ['Per la mia casa', 'Per la mia collezione', 'Per un regalo', 'Per il piacere di scoprire'];
   if (preferences) preferences = {styles: preferences.styles.filter(s => styleOptions.includes(s)), budget: budgetOptions.includes(preferences.budget) ? preferences.budget : '', intent: intentOptions.includes(preferences.intent) ? preferences.intent : ''};
-  let visibleLimit = 9;
+  let visibleLimit = works.length;
   let filter = 'all', quizStep = 0, draft, requestText = '', toastTimer;
   const dialog = $('#dialog'), body = $('#dialog-body');
   let imageSerial = 0;
@@ -31,14 +31,11 @@
   const showcaseGrid = $('.showcase-grid');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const aspectOf = w => w.image ? w.image.width / w.image.height : 0.5;
-  const portraitWorks = works.filter(w => aspectOf(w) < 0.8);
-  const mainWorks = works.filter(w => aspectOf(w) >= 0.8 && aspectOf(w) <= 1.2);
-  const showcaseScenes = mainWorks.map(w => [w]);
-  if(!showcaseScenes.length) showcaseScenes.push([]);
-  const sceneCount = Math.max(showcaseScenes.length, portraitWorks.length);
+  const showcaseWorks = works;
+  const sceneCount = showcaseWorks.length;
   const cycleIndex = (index, length) => ((index % length) + length) % length;
-  let showcaseIndex = 0, portraitIndex = 0, showcaseTimer = null, showcaseChanging = false;
-  let nextShowcaseSide = 'right', nextShowcaseDelay = 5000;
+  let showcaseIndex = 0, showcaseTimer = null, showcaseChanging = false;
+  const showcaseInterval = 3000;
   let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
   function canShowcaseAdvance() {
     return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement) && sceneCount>1;
@@ -46,43 +43,33 @@
   function scheduleShowcase() {
     clearTimeout(showcaseTimer);
     showcaseTimer = null;
-    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),nextShowcaseDelay);
+    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),showcaseInterval);
   }
-  function showcaseWork(w, slot, portrait=false) {
+  function showcaseWork(w) {
     const n = works.indexOf(w);
-    const offsets = [[-12,0],[0,14],[12,0],[0,-12],[-8,8],[8,-8]];
-    const [x,y] = offsets[n % offsets.length];
-    const motion = `--entry-x:${x}px;--entry-y:${y}px;--entry-scale:${n%3===0?0.985:1};--entry-duration:${700+n*11}ms;--entry-delay:${slot*90+(n*7)%90}ms`;
-    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">${icon('external-arrow')}</span></span></button></figure>`;
+    const motion = `--entry-duration:${reducedMotion.matches ? 0 : 1100}ms;--entry-hue:${(n%5)-2}`;
+    return `<figure class="showcase-work" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">${icon('external-arrow')}</span></span></button></figure>`;
   }
-  function renderShowcase(manual=false, changedSide=null) {
-    const current = showcaseScenes[cycleIndex(showcaseIndex, showcaseScenes.length)];
-    const portrait = portraitWorks.length ? portraitWorks[cycleIndex(portraitIndex, portraitWorks.length)] : null;
-    if(changedSide!=='right') $('#showcase-pair').innerHTML = current.map((w,i)=>showcaseWork(w,i)).join('');
-    if(changedSide!=='left') $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,1,true) : '';
-    showcaseGrid.classList.toggle('without-portrait',!portrait);
-    showcaseGrid.classList.toggle('without-main',!current.length);
+  function renderShowcase(manual=false) {
+    const current = showcaseWorks[cycleIndex(showcaseIndex, sceneCount)];
+    $('#showcase-pair').innerHTML = current ? showcaseWork(current) : '';
     const position = cycleIndex(showcaseIndex, sceneCount) + 1;
     $('#showcase-count').textContent = `${String(position).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
     $('#showcase-count').setAttribute('aria-label',`Esposizione ${position} di ${sceneCount}`);
-    if(manual) $('#showcase-announcement').textContent = (changedSide==='right' ? portrait : current[0])?.title || '';
-    showcaseGrid.classList.remove('is-changing-left','is-changing-right');
+    if(manual) $('#showcase-announcement').textContent = current?.title || '';
+    showcaseGrid.classList.remove('is-changing');
     showcaseChanging = false;
     scheduleShowcase();
   }
   function moveShowcase(direction,automatic=false) {
     if(showcaseChanging || (automatic && !canShowcaseAdvance())) return;
-    const side = nextShowcaseSide;
     clearTimeout(showcaseTimer);
     showcaseChanging = true;
-    showcaseGrid.classList.add(side==='right'?'is-changing-right':'is-changing-left');
+    showcaseGrid.classList.add('is-changing');
     setTimeout(()=>{
-      if(side==='right') portraitIndex+=direction;
-      else showcaseIndex+=direction;
-      nextShowcaseSide = side==='right'?'left':'right';
-      nextShowcaseDelay = 3000;
-      renderShowcase(!automatic,side);
-    },reducedMotion.matches?0:180);
+      showcaseIndex+=direction;
+      renderShowcase(!automatic);
+    },reducedMotion.matches?0:420);
   }
   function updateShowcasePlayback() {
     $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
@@ -180,11 +167,58 @@
     const recommended = works.filter(w => preferences.styles.includes(w.category));
     open('quiz-result', `<p class="modal-eyebrow">LE TUE PREFERENZE</p><h2 id="dialog-title">Opere selezionate.</h2><p>${recommended.length ? 'Abbiamo raccolto le opere degli stili che hai scelto.' : 'Ti proponiamo di iniziare esplorando tutti gli stili.'} Le preferenze saranno incluse nella richiesta.</p><div class="contact-summary"><strong>I tuoi interessi</strong><br>${esc(preferences.styles.join(', '))}<br>${esc(preferences.budget)} · ${esc(preferences.intent)}</div>${(recommended.length ? recommended : works).map(w => `<div class="saved-item">${image(w)}<div><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3><p>${esc(w.category)}</p></div>${saveButton(w)}</div>`).join('')}<div class="modal-actions"><button class="button" data-action="contact">Prepara una richiesta ${icon('chat')}</button><button class="button secondary" data-action="quiz">Modifica preferenze</button></div><p class="demo-note">L’abbinamento usa gli stili selezionati. Il budget e l’occasione vengono inclusi nella richiesta per la galleria.</p>`);
   }
-  function contact(workId) {
+  function contact() {
+    const address = String(config.address || '').trim();
+    const hours = String(config.openingHours || '').trim();
+    const phone = String(config.phone || '').trim();
+    const email = String(config.email || '').trim();
+    const whatsapp = String(config.whatsapp || '').replace(/[^0-9]/g,'');
+    const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
+    const directLink = (href, symbol, title, detail) => href
+      ? `<a class="contact-tile" href="${esc(href)}" ${href.startsWith('https:') ? 'target="_blank" rel="noopener noreferrer"' : ''}>${icon(symbol)}<span><strong>${esc(title)}</strong><small>${esc(detail)}</small></span>${icon('external-arrow')}</a>`
+      : `<div class="contact-tile is-unavailable" aria-disabled="true">${icon(symbol)}<span><strong>${esc(title)}</strong><small>${esc(detail || 'Dato da inserire')}</small></span></div>`;
+    const socials = [['facebook','Facebook',config.facebook],['instagram','Instagram',config.instagram],['x','X',config.x]]
+      .map(([symbol,label,url]) => /^https:\/\/(www\.)?(facebook\.com|instagram\.com|x\.com)\//.test(String(url || ''))
+        ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${icon(symbol)}</a>`
+        : `<span aria-label="${label} non configurato" title="${label}: dato da inserire">${icon(symbol)}</span>`).join('');
+    open('contact-hub', `<p class="modal-eyebrow">CONTATTI</p><h2 id="dialog-title">La galleria, in modo diretto.</h2><p>Indirizzo, orari e canali di contatto.</p><div class="contact-grid">
+      ${directLink(mapUrl,'location','Dove siamo',address || 'Indirizzo da inserire')}
+      <button class="contact-tile" data-action="appointment">${icon('clock')}<span><strong>Orari e visite</strong><small>${esc(hours || 'Orari da inserire')} · Prenota una visita</small></span>${icon('external-arrow')}</button>
+      ${directLink(phone ? `tel:${phone.replace(/[^+\d]/g,'')}` : '', 'phone','Telefono',phone || 'Numero da inserire')}
+      ${directLink(email ? `mailto:${email}` : '', 'mail','Email',email || 'Indirizzo da inserire')}
+      ${directLink(/^[1-9][0-9]{7,14}$/.test(whatsapp) ? `https://wa.me/${whatsapp}` : '', 'whatsapp','WhatsApp',config.whatsapp ? 'Apri la conversazione' : 'Numero da inserire')}
+      <div class="contact-tile contact-social">${icon('social')}<span><strong>Social</strong><small>Segui la galleria</small><span class="social-links">${socials}</span></span></div>
+    </div><div class="modal-actions"><button class="button" data-action="inquiry">Scrivi un messaggio ${icon('chat')}</button><button class="button secondary" data-action="appointment">Informazioni e appuntamenti ${icon('arrow')}</button></div>`);
+  }
+  function contactForm(workId) {
     const selected = workId ? works.filter(w => w.id === workId) : works.filter(w => saved.has(w.id));
     const selection = selected.map(w => w.title).join(', ');
     const channels = config.email || config.phone || config.facebook || config.whatsapp;
-    open('contact', `<p class="modal-eyebrow">CONTATTI</p><h2 id="dialog-title">Scrivi alla galleria.</h2><p>Informazioni sulle opere o richiesta di appuntamento.</p>${selection || preferences ? `<div class="contact-summary">${selection ? `<strong>Le opere che ti interessano</strong><ul class="contact-works" aria-label="Opere selezionate">${selected.map(w => `<li><span class="contact-work-image">${image(w,'meet')}</span><span class="contact-work-title">${esc(w.title)}</span></li>`).join('')}</ul>` : ''}${preferences ? `<p style="margin:8px 0 0;font-size:13px">Preferenze: ${esc(preferences.styles.join(', '))} · ${esc(preferences.budget)} · ${esc(preferences.intent)}</p>` : ''}</div>` : ''}<form id="contact-form"><div class="form-grid"><label class="field">Il tuo nome<input name="name" autocomplete="given-name" required maxlength="100" placeholder="Come ti chiami?"></label><label class="field">Preferisco essere contattato via<select name="channel"><option value="Email">Email</option><option value="Telefono">Telefono</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option></select></label></div><label class="field" id="reply-field">La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it"></label><label class="field">Cosa vorresti sapere? <small>Facoltativo</small><textarea name="message" maxlength="2000" placeholder="Ad esempio: mi piacerebbe vedere quest’opera in galleria."></textarea></label><input type="hidden" name="selection" value="${esc(selection)}"><button class="button" type="submit">Prepara la richiesta ${icon('arrow')}</button><p class="demo-note">${channels ? 'Potrai controllare la richiesta e scegliere come inviarla. Il sito non invia messaggi automaticamente.' : 'Questo è un fac simile: nessun messaggio viene inviato. Potrai copiare o scaricare la richiesta di esempio.'} I dati del modulo non vengono salvati sul sito.</p></form>${config.phone ? `<p><a class="text-link" href="tel:${esc(config.phone.replace(/[^+\d]/g,''))}">Preferisci chiamare? ${esc(config.phone)}</a></p>` : ''}${config.facebook && /^https:\/\/(www\.)?(facebook\.com|m\.me)\//.test(config.facebook) ? `<a class="text-link" href="${esc(config.facebook)}" target="_blank" rel="noopener noreferrer">Scrivi su Facebook ${icon('arrow')}</a>` : ''}`);
+    open('contact', `<p class="modal-eyebrow">CONTATTI</p><h2 id="dialog-title">Scrivi alla galleria.</h2><p>Fai una domanda sulle opere o sulle preferenze che hai scelto.</p>${selection || preferences ? `<div class="contact-summary">${selection ? `<strong>Le opere che ti interessano</strong><ul class="contact-works" aria-label="Opere selezionate">${selected.map(w => `<li><span class="contact-work-image">${image(w,'meet')}</span><span class="contact-work-title">${esc(w.title)}</span></li>`).join('')}</ul>` : ''}${preferences ? `<p style="margin:8px 0 0;font-size:13px">Preferenze: ${esc(preferences.styles.join(', '))} · ${esc(preferences.budget)} · ${esc(preferences.intent)}</p>` : ''}</div>` : ''}<form id="contact-form"><div class="form-grid"><label class="field">Il tuo nome<input name="name" autocomplete="given-name" required maxlength="100" placeholder="Come ti chiami?"></label><label class="field">Preferisco essere contattato via<select name="channel"><option value="Email">Email</option><option value="Telefono">Telefono</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option></select></label></div><label class="field" id="reply-field">La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it"></label><label class="field">Cosa vorresti sapere? <small>Facoltativo</small><textarea name="message" maxlength="2000" placeholder="Ad esempio: mi piacerebbe vedere quest’opera in galleria."></textarea></label><input type="hidden" name="selection" value="${esc(selection)}"><button class="button" type="submit">Prepara la richiesta ${icon('arrow')}</button><p class="demo-note">${channels ? 'Potrai controllare la richiesta e scegliere come inviarla. Il sito non invia messaggi automaticamente.' : 'Questo è un fac simile: nessun messaggio viene inviato. Potrai copiare o scaricare la richiesta di esempio.'} I dati del modulo non vengono salvati sul sito.</p></form>${config.phone ? `<p><a class="text-link" href="tel:${esc(config.phone.replace(/[^+\d]/g,''))}">Preferisci chiamare? ${esc(config.phone)}</a></p>` : ''}${config.facebook && /^https:\/\/(www\.)?(facebook\.com|m\.me)\//.test(config.facebook) ? `<a class="text-link" href="${esc(config.facebook)}" target="_blank" rel="noopener noreferrer">Scrivi su Facebook ${icon('arrow')}</a>` : ''}`);
+  }
+  function appointmentSlots(date) {
+    const slots = Array.isArray(config.visitSlots?.[date]) ? config.visitSlots[date] : [];
+    const valid = slots.filter(time => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time));
+    return valid.length
+      ? `<fieldset class="slot-picker"><legend>Orari disponibili</legend><div class="slot-options">${valid.map((time,i)=>`<label><input type="radio" name="slot" value="${esc(time)}" ${i===0?'checked':''}><span>${esc(time)}</span></label>`).join('')}</div></fieldset>`
+      : `<p class="slots-empty">Per questa data non ci sono orari pubblicati. Scegli un altro giorno.</p>`;
+  }
+  function appointment() {
+    const today = new Date(), localToday = new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const address = String(config.address || '').trim();
+    const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
+    const location = address ? `<a class="appointment-location" href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">${icon('location')}<span><strong>La visita si svolge qui</strong><br>${esc(address)}</span>${icon('external-arrow')}</a>` : `<div class="appointment-location is-unavailable">${icon('location')}<span><strong>Sede della collezione</strong><br>Indirizzo in aggiornamento</span></div>`;
+    open('appointment', `<p class="modal-eyebrow">INFORMAZIONI E APPUNTAMENTI</p><h2 id="dialog-title">Prenota una visita.</h2><p>Seleziona un giorno e un orario pubblicato. La galleria ti confermerà l’appuntamento via email o WhatsApp.</p>${location}<form id="appointment-form"><label class="field">Giorno della visita<input name="date" type="date" min="${localToday}" value="${localToday}" required></label><div id="appointment-slots">${appointmentSlots(localToday)}</div><div class="form-grid"><label class="field">Il tuo nome<input name="name" autocomplete="given-name" required maxlength="100"></label><label class="field">Conferma tramite<select name="channel"><option value="Email">Email</option><option value="WhatsApp">WhatsApp</option></select></label></div><label class="field" id="appointment-reply-field">La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it"></label><button class="button" type="submit" ${appointmentSlots(localToday).includes('slot-picker')?'':'disabled'}>Invia richiesta di visita ${icon('arrow')}</button><p class="demo-note">La richiesta non blocca lo slot: l’appuntamento è confermato solo dopo la risposta della galleria. Gli orari mostrati sono quelli inseriti in config.js.</p></form>`);
+    $('#appointment-form [name="date"]').addEventListener('change',e=>{ $('#appointment-slots').innerHTML=appointmentSlots(e.target.value); $('#appointment-form button[type="submit"]').disabled=!$('#appointment-slots .slot-picker'); });
+  }
+  function prepareAppointment(form) {
+    const data = new FormData(form), date = String(data.get('date') || ''), slot = String(data.get('slot') || '');
+    if (!Array.isArray(config.visitSlots?.[date]) || !config.visitSlots[date].includes(slot)) { notify('Questo orario non è più disponibile'); appointment(); return; }
+    requestText = `Richiesta di visita — ${config.name}\n\nNome: ${data.get('name')}\nGiorno richiesto: ${date}\nOrario richiesto: ${slot}\nConferma tramite: ${data.get('channel')}\nRecapito: ${data.get('reply')}\n\nLa visita non è confermata finché la galleria non risponde.`;
+    const whatsappNumber=String(config.whatsapp || '').replace(/[^0-9]/g,'');
+    const whatsappUrl=data.get('channel')==='WhatsApp'&&/^[1-9][0-9]{7,14}$/.test(whatsappNumber)?`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(requestText)}`:null;
+    const emailUrl=data.get('channel')==='Email'&&config.email?`mailto:${encodeURIComponent(config.email)}?subject=${encodeURIComponent('Richiesta di visita — '+config.name)}&body=${encodeURIComponent(requestText)}`:null;
+    open('appointment-request',`<p class="modal-eyebrow">RICHIESTA DI VISITA</p><h2 id="dialog-title">Controlla i dettagli.</h2><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsappUrl?`<a class="button" href="${esc(whatsappUrl)}" target="_blank" rel="noopener noreferrer">Invia con WhatsApp ${icon('external-arrow')}</a>`:''}${emailUrl?`<a class="button" href="${esc(emailUrl)}">Invia con email ${icon('arrow')}</a>`:''}<button class="button ${whatsappUrl||emailUrl?'secondary':''}" data-action="copy-request">Copia la richiesta</button><button class="button secondary" data-action="download-request">Scarica il riepilogo</button></div><p class="demo-note">La galleria deve confermare l’orario. Nessun messaggio parte senza la tua azione.</p>`);
   }
   function prepareRequest(form) {
     const data = new FormData(form);
@@ -200,8 +234,8 @@
     if(target.dataset.showcase) { if(target.dataset.showcase==='toggle'){showcasePlaying=!showcasePlaying;updateShowcasePlayback();}else moveShowcase(target.dataset.showcase==='next'?1:-1);return; }
     if (target.dataset.save) { toggleSaved(target.dataset.save); if(dialog.dataset.view === 'detail') { const w = works.find(w=>w.id===target.dataset.save); if(w) target.innerHTML = `${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}`; } return; }
     if (target.dataset.detail) return detail(target.dataset.detail);
-    if (target.dataset.inquire) return contact(target.dataset.inquire);
-    if (target.dataset.filter) { filter = target.dataset.filter; visibleLimit = 9; $$('.filter').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); }); renderWorks(); return; }
+    if (target.dataset.inquire) return contactForm(target.dataset.inquire);
+    if (target.dataset.filter) { filter = target.dataset.filter; visibleLimit = works.length; $$('.filter').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); }); renderWorks(); return; }
     if (target.dataset.choice) {
       const key = target.dataset.key, value = target.dataset.choice;
       if (key === 'styles') { if (value === 'Mi lascio consigliare') draft.styles = draft.styles.includes(value) ? [] : [value]; else { draft.styles = draft.styles.filter(s => s !== 'Mi lascio consigliare'); draft.styles = draft.styles.includes(value) ? draft.styles.filter(s => s !== value) : [...draft.styles, value]; } }
@@ -210,9 +244,11 @@
       $('[data-action="quiz-next"]', dialog).disabled = !(key === 'styles' ? draft.styles.length : draft[key]); return;
     }
     switch(target.dataset.action) {
-      case 'more-works': visibleLimit += 9; renderWorks(); break;
+      case 'more-works': visibleLimit = works.length; renderWorks(); break;
       case 'saved': renderSaved(); break;
       case 'contact': contact(); break;
+      case 'appointment': appointment(); break;
+      case 'inquiry': contactForm(); break;
       case 'quiz': startQuiz(); break;
       case 'browse': dialog.close(); $('#opere').scrollIntoView({behavior:'smooth'}); break;
       case 'quiz-back': if (quizStep) { quizStep--; renderQuiz(); } else dialog.close(); break;
@@ -223,8 +259,8 @@
       case 'download-request': { const url = URL.createObjectURL(new Blob([requestText],{type:'text/plain;charset=utf-8'})); const a = document.createElement('a'); a.href=url;a.download='richiesta-forma.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); break; }
     }
   });
-  document.addEventListener('change', e => { if(e.target.matches('[name="channel"]')) { const channel=e.target.value; const label=$('#reply-field'); label.innerHTML=channel === 'WhatsApp' ? 'Il tuo numero WhatsApp<input name="reply" type="tel" inputmode="tel" autocomplete="tel" required maxlength="30" placeholder="Numero con prefisso internazionale">' : channel === 'Telefono' ? 'Il tuo telefono<input name="reply" type="tel" autocomplete="tel" required maxlength="30" placeholder="Il numero a cui richiamarti">' : channel === 'Facebook' ? 'Il tuo nome o profilo Facebook<input name="reply" required maxlength="200" placeholder="Nome o link del tuo profilo">' : 'La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it">'; } });
-  document.addEventListener('submit', e => { if(e.target.id === 'contact-form') { e.preventDefault(); prepareRequest(e.target); } });
+  document.addEventListener('change', e => { if(e.target.matches('[name="channel"]')) { const channel=e.target.value; const appointmentMode=!!e.target.closest('#appointment-form'); const label=appointmentMode?$('#appointment-reply-field'):$('#reply-field'); if(!label)return; label.innerHTML=channel === 'WhatsApp' ? 'Il tuo numero WhatsApp<input name="reply" type="tel" inputmode="tel" autocomplete="tel" required maxlength="30" placeholder="Numero con prefisso internazionale">' : channel === 'Telefono' ? 'Il tuo telefono<input name="reply" type="tel" autocomplete="tel" required maxlength="30" placeholder="Il numero a cui richiamarti">' : channel === 'Facebook' ? 'Il tuo nome o profilo Facebook<input name="reply" required maxlength="200" placeholder="Nome o link del tuo profilo">' : 'La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it">'; } });
+  document.addEventListener('submit', e => { if(e.target.id === 'contact-form') { e.preventDefault(); prepareRequest(e.target); } if(e.target.id === 'appointment-form') { e.preventDefault(); prepareAppointment(e.target); } });
   $('.close',dialog).addEventListener('click',()=>dialog.close());
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
   const textButton=$('#text-size');
