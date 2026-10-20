@@ -15,7 +15,7 @@ Aprire http://127.0.0.1:8080. La pubblicazione GitHub Pages usa il ramo `main`, 
 ## Esperienza
 
 - Collage di dieci opere: sei quadrate e quattro verticali, distribuite fra loro in due fasce su desktop e tre su mobile. I rapporti originali 1:1 e 2:3 restano invariati, senza fughe o sovrapposizioni fra gli slot.
-- Una sola dissolvenza lineare di 5,2 secondi alla volta, avviata subito. Alla conclusione parte direttamente la successiva, su uno slot casuale diverso. Le immagini vengono scelte solo fra quelle dello stesso formato e non presenti negli altri slot.
+- Una sola dissolvenza lineare di 3,6 secondi alla volta, avviata subito. Alla conclusione parte direttamente la successiva, su uno slot casuale diverso. Le immagini vengono scelte solo fra quelle dello stesso formato e non presenti negli altri slot.
 - Pausa esplicita, sospensione con scheda nascosta, collage fuori schermo o finestra aperta. Rispetto del movimento ridotto del dispositivo.
 - Eventi fra collage e opere: copertine, date, orari, accesso, dettagli e richiesta di informazioni; scorrimento tramite frecce, tastiera o gesto touch.
 - Astratto, Geometrico e Paesaggio: due opere iniziali per categoria, espansione indipendente di due in due fino a dieci, con possibilità di richiudere.

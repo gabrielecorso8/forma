@@ -103,7 +103,7 @@
   // Fixed ratio slots: square = 1:1, portrait = 2:3. Only one crossfade is active.
   let collageSlots = [], collageAnimation = null, collagePending = null, collageGeneration = 0;
   let collagePlaying = !reducedMotion.matches, collageVisible = true, lastSlot = -1, collageObserver;
-  const collageDuration = 5200;
+  const collageDuration = 3600;
   function collageCanPlay() { return collagePlaying && collageVisible && !document.hidden && !dialog.open && !activeArtist; }
   function stopCollage() {
     collageGeneration++;
