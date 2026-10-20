@@ -100,21 +100,21 @@
     root.innerHTML = list.length ? `<div class="selection-strip" tabindex="0" aria-label="${tr('Opere salvate','Saved works')}">${list.map(w=>`<article class="selection-tile"><button class="selection-image" data-detail="${w.id}" aria-label="${esc(tr('Osserva ','View ')+title(w))}">${image(w)}</button><h3><button data-detail="${w.id}">${esc(title(w))}</button></h3>${artistLink(w)}${saveButton(w)}</article>`).join('')}</div><button class="line-link" data-action="inquiry">${tr('Chiedi informazioni sulla selezione','Enquire about your selection')}${icon('external-arrow')}</button>` : `<div class="selection-empty">${icon('heart')}<p>${tr('La tua selezione inizia da un’opera. Tocca il cuore accanto ai quadri che vuoi ritrovare.','Your selection starts with one work. Tap the heart beside the paintings you want to return to.')}</p><a class="line-link" href="#opere">${tr('Esplora le opere','Explore the artworks')} ↓</a></div>`;
   }
 
-  // Fixed ratio slots: square = 1:1, portrait = 2:3. Only one crossfade is active.
-  let collageSlots = [], collageAnimation = null, collagePending = null, collageGeneration = 0;
-  let collagePlaying = !reducedMotion.matches, collageVisible = true, lastSlot = -1, collageObserver;
+  // Fixed ratio slots: square = 1:1, portrait = 2:3. Each batch changes 2–4 distinct slots together.
+  let collageSlots = [], collageAnimation = null, collagePending = [], collageGeneration = 0;
+  let collagePlaying = !reducedMotion.matches, collageVisible = true, lastSlots = new Set(), collageObserver;
   const collageDuration = 3600;
   function collageCanPlay() { return collagePlaying && collageVisible && !document.hidden && !dialog.open && !activeArtist; }
   function stopCollage() {
     collageGeneration++;
-    if (collageAnimation) { collageAnimation.onfinish = null; collageAnimation.cancel(); }
-    collageAnimation = null; collagePending = null;
+    collagePending.forEach(({animation})=>{animation.onfinish=null;animation.cancel();});
+    collageAnimation = null; collagePending = [];
     collageObserver?.disconnect();
   }
   function updatePlayback() {
     const button = $('[data-action="toggle-collage"]');
     if (button) { button.innerHTML = `<span aria-hidden="true">${collagePlaying?'Ⅱ':'▷'}</span>${collagePlaying?tr('Pausa','Pause'):tr('Riprendi','Resume')}`; button.setAttribute('aria-label',collagePlaying?tr('Metti in pausa le dissolvenze','Pause the crossfades'):tr('Riprendi le dissolvenze','Resume the crossfades')); }
-    if (collageAnimation) { if (collageCanPlay()) collageAnimation.play(); else collageAnimation.pause(); }
+    if (collageAnimation) { collagePending.forEach(({animation})=>{if(collageCanPlay())animation.play();else animation.pause();}); }
     else if (collageCanPlay()) nextCollageChange();
   }
   function startCollage() {
@@ -132,31 +132,39 @@
   }
   function nextCollageChange() {
     if (!collageCanPlay() || collageAnimation || !collageSlots.length) return;
-    const eligible = collageSlots.filter(slot=>slot.index!==lastSlot);
-    const slot = eligible[Math.floor(Math.random()*eligible.length)];
-    const used = new Set(collageSlots.map(other=>other.work.id));
-    const candidates = slot.pool.filter(w=>!used.has(w.id));
-    const next = candidates[Math.floor(Math.random()*candidates.length)];
-    if (!next) return;
-    const tile = $(`[data-collage-slot="${slot.index}"]`), incoming = document.createElement('span');
-    if (!tile) return;
-    incoming.className = 'collage-layer incoming';
-    incoming.setAttribute('aria-hidden','true');
-    incoming.innerHTML = image(next);
-    tile.append(incoming);
-    collagePending = {slot,next};
-    lastSlot = slot.index;
+    const eligible = collageSlots.filter(slot=>!lastSlots.has(slot.index));
+    const count = 2 + Math.floor(Math.random()*3), selected = [];
+    while (selected.length<count && eligible.length) selected.push(eligible.splice(Math.floor(Math.random()*eligible.length),1)[0]);
+    const used = new Set(collageSlots.map(slot=>slot.work.id));
     const generation = collageGeneration;
-    collageAnimation = incoming.animate([{opacity:0},{opacity:1}],{duration:collageDuration,easing:'linear',fill:'forwards'});
-    collageAnimation.onfinish = () => {
-      if (generation!==collageGeneration) return;
-      tile.firstElementChild.remove();
-      incoming.classList.remove('incoming');incoming.removeAttribute('aria-hidden');incoming.style.opacity='1';
-      slot.work = next;tile.setAttribute('aria-label',tr('Osserva ','View ')+title(next));
-      collageAnimation.cancel();collageAnimation=null;collagePending=null;
+    collagePending = selected.map(slot=>{
+      const candidates = slot.pool.filter(w=>!used.has(w.id));
+      const next = candidates[Math.floor(Math.random()*candidates.length)];
+      const tile = $(`[data-collage-slot="${slot.index}"]`);
+      if(!next||!tile)return null;
+      used.add(next.id);
+      const incoming = document.createElement('span');
+      incoming.className='collage-layer incoming';incoming.setAttribute('aria-hidden','true');incoming.innerHTML=image(next);
+      tile.append(incoming);
+      const animation=incoming.animate([{opacity:0},{opacity:1}],{duration:collageDuration,easing:'linear',fill:'forwards'});
+      return {slot,next,tile,incoming,animation};
+    }).filter(Boolean);
+    if(!collagePending.length)return;
+    lastSlots=new Set(collagePending.map(({slot})=>slot.index));
+    collageAnimation=collagePending[0].animation;
+    collageAnimation.onfinish=()=>{
+      if(generation!==collageGeneration)return;
+      collagePending.forEach(({slot,next,tile,incoming,animation})=>{
+        tile.firstElementChild.remove();
+        incoming.classList.remove('incoming');incoming.removeAttribute('aria-hidden');incoming.style.opacity='1';
+        slot.work=next;tile.setAttribute('aria-label',tr('Osserva ','View ')+title(next));
+        animation.onfinish=null;animation.cancel();
+      });
+      collageAnimation=null;collagePending=[];
       nextCollageChange();
     };
   }
+
   document.addEventListener('visibilitychange',updatePlayback);
   document.addEventListener('focusin',e=>{if(e.target.closest('#showcase-collage'))updatePlayback();});
   document.addEventListener('focusout',()=>queueMicrotask(updatePlayback));
@@ -303,7 +311,7 @@
     if(target.hasAttribute('data-visit-inquiry'))return contactForm(null,tr('Vorrei concordare una visita alla collezione.','I would like to arrange a visit to the collection.'));
     if(target.dataset.view)return viewerAction(target.dataset.view);
     if(target.dataset.save)return toggleSaved(target.dataset.save);
-    if(target.dataset.collageSlot!==undefined){const slot=collageSlots[Number(target.dataset.collageSlot)];const visible=collagePending?.slot===slot&&collageAnimation.currentTime>collageDuration/2?collagePending.next:slot.work;return detail(visible.id);}
+    if(target.dataset.collageSlot!==undefined){const slot=collageSlots[Number(target.dataset.collageSlot)],pending=collagePending.find(change=>change.slot===slot);const visible=pending&&pending.animation.currentTime>collageDuration/2?pending.next:slot.work;return detail(visible.id);}
     if(target.dataset.detail)return detail(target.dataset.detail);
     if(target.dataset.inquire)return contactForm(target.dataset.inquire);
     switch(target.dataset.action){
