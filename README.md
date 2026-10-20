@@ -2,54 +2,58 @@
 
 [Sito su GitHub Pages](https://gabrielecorso8.github.io/forma/)
 
-Vetrina artistica minimale con 30 opere dimostrative, preferenze personali e contatto guidato. HTML, CSS e JavaScript statici, senza dipendenze o compilazione.
+Sito statico bilingue IT/EN per una galleria: 30 opere dimostrative, sei artisti immaginari, eventi e contatto diretto. HTML, CSS e JavaScript senza dipendenze di esecuzione o compilazione.
 
 ## Avvio locale
-
-Con Python 3 installato, dalla cartella della repository:
 
 ```sh
 python -m http.server 8080 --bind 127.0.0.1
 ```
 
-Aprire **http://127.0.0.1:8080**. In alternativa, pubblicare i file della repository su un hosting statico. È possibile anche aprire `index.html` direttamente; clipboard e memoria locale funzionano più uniformemente su HTTP locale o HTTPS.
+Aprire http://127.0.0.1:8080. La pubblicazione GitHub Pages usa il ramo `main`, cartella `/(root)`, con `.nojekyll` e percorsi relativi compatibili con `/forma/`.
 
-## Funzioni
+## Esperienza
 
-- 30 opere: 10 Astratto, 10 Geometrico e 10 Paesaggio.
-- Tutte le 30 opere visibili subito, con filtri per categoria.
-- Opere intere in apertura, senza ingrandimento automatico.
-- Sala di osservazione con zoom, trascinamento, fondo chiaro/scuro e navigazione fra opere.
-- Preferite e preferenze conservate sul dispositivo, senza registrazione.
-- Modulo contatti con miniature e titoli delle opere selezionate.
-- Pannello contatti con indirizzo, orari, telefono, email, WhatsApp e social configurabili.
-- Richiesta di visita su data e orario pubblicati, da confermare via email o WhatsApp.
-- Testi ingrandibili e layout responsive.
+- Collage di dieci opere: sei quadrate e quattro verticali, distribuite fra loro in due fasce su desktop e tre su mobile. I rapporti originali 1:1 e 2:3 restano invariati, senza fughe o sovrapposizioni fra gli slot.
+- Una sola dissolvenza lineare di 5,2 secondi alla volta, avviata subito. Alla conclusione parte direttamente la successiva, su uno slot casuale diverso. Le immagini vengono scelte solo fra quelle dello stesso formato e non presenti negli altri slot.
+- Pausa esplicita, sospensione con scheda nascosta, collage fuori schermo o finestra aperta. Rispetto del movimento ridotto del dispositivo.
+- Eventi fra collage e opere: copertine, date, orari, accesso, dettagli e richiesta di informazioni; scorrimento tramite frecce, tastiera o gesto touch.
+- Astratto, Geometrico e Paesaggio: due opere iniziali per categoria, espansione indipendente di due in due fino a dieci, con possibilità di richiudere.
+- Artisti con percorsi dedicati all’indirizzo `#artisti/identificativo` e cinque opere ciascuno. I collegamenti funzionano anche dopo un ricaricamento diretto.
+- Selezione personale con miniature, titolo e artista. I salvataggi rimangono sul dispositivo.
+- Sala di osservazione con zoom, trascinamento, fondo chiaro/scuro e navigazione fra opere; nel percorso artista naviga soltanto fra le sue opere.
+- Presentazione della galleria fisica e collegamento Informazioni e appuntamenti nel blocco Contatti.
+- Lingua IT/EN per navigazione, contenuti, schede, artisti, eventi e moduli. Preferenza lingua e ingrandimento testi salvati sul dispositivo.
 
 ## Personalizzazione
 
-| File | Contenuto |
-| --- | --- |
-| `config.js` | Nome, recapiti, colori principali e catalogo |
-| `index.html` | Marchio, testi e struttura della pagina |
-| `style.css` | Aspetto, tipografia e layout |
-| `app.js` | Filtri, preferite, visualizzatore e modulo |
-| `assets/` | Immagini e risorse locali |
+Tutti i dati editoriali sono in `config.js`:
 
-I recapiti, l’indirizzo e gli orari sono inizialmente `null`. Inserire in `config.js` i dati verificati della galleria. `visitSlots` contiene le date disponibili e i relativi orari (`"AAAA-MM-GG": ["10:00", "11:30"]`); il sito consente di richiedere soltanto uno di quegli orari e la galleria deve confermare la visita. Le azioni aprono le applicazioni del visitatore con i dati predisposti; nessun messaggio viene inviato automaticamente.
+| Campo | Uso |
+| --- | --- |
+| `artworks` | Titolo, titolo inglese, descrizioni IT/EN, tecnica, misure, immagine e `artistId` |
+| `featuredWorkIds` | I due ID da mostrare per primi in ogni categoria |
+| `artists` | Nome, pratica, biografia bilingue, tre tappe del percorso e opera di copertina |
+| `events` | Titolo, tipo, descrizione e accesso bilingui; data, eventuale fine, orario e due opere di copertina |
+| `email`, `phone`, `whatsapp` | Recapiti verificati della galleria |
+| `address`, `openingHours` | Sede della collezione e orari |
+| `facebook`, `instagram`, `x` | URL dei profili ufficiali |
+| `visitSlots` | Date e orari richiedibili, ad esempio `"2026-12-03": ["10:00", "11:30"]` |
+
+`featuredWorkIds` usa le chiavi `Astratto`, `Geometrico`, `Paesaggio`. Gli ID indicati devono appartenere alla categoria corrispondente. Le altre opere seguono nell’ordine del catalogo.
+
+Le schede degli artisti ricavano le opere dal relativo `artistId`, quindi non serve mantenere una seconda lista. Per cambiare le traduzioni dell’interfaccia modificare le coppie `tr(italiano, inglese)` in `app.js`.
+
+## Contatti e visite
+
+I recapiti reali sono ancora da inserire. Le date disponibili vengono lette da `visitSlots`; il sito esclude giorni privi di slot e orari già trascorsi. Con calendario vuoto propone di concordare una visita tramite contatto. La richiesta non prenota automaticamente né blocca lo slot: la galleria deve confermarlo via email o WhatsApp.
+
+I moduli non inviano dati a un backend. Il visitatore controlla un riepilogo e sceglie di aprire email o WhatsApp; può anche copiarlo o scaricarlo. Nessun messaggio parte automaticamente. La selezione delle opere viene accompagnata da miniature, titoli e nomi degli artisti.
 
 ## Contenuti dimostrativi
 
-Marchio, opere, tecniche e misure sono esempi. Il sito non è un inventario di opere realmente in vendita. Le immagini sono generate; i prompt sono documentati in [PROMPT-IMMAGINI.md](PROMPT-IMMAGINI.md). I font della prima versione, conservati fra gli asset con licenza OFL, non vengono caricati dall’allestimento corrente, che usa caratteri di sistema.
+Opere, artisti, eventi, date e immagine della galleria sono esempi. Il sito non rappresenta un inventario o un programma reale. Le opere sono generate con ImageGen 2.5; i prompt delle immagini sono in [PROMPT-IMMAGINI.md](PROMPT-IMMAGINI.md). Gli artisti sono immaginari e gli eventi sono indicati come dimostrativi nell’interfaccia. Per l’uso commerciale inserire dati verificati e informativa privacy appropriata.
 
-Il modulo non trasmette dati a un backend. Senza recapiti configurati prepara solo il riepilogo. Prima dell’uso commerciale sostituire i contenuti dimostrativi e predisporre i dati e l’informativa della galleria.
+## Verifica
 
-La guida completa è in [docs/GUIDA.md](docs/GUIDA.md). I metadati interni dell’hosting Sites e le credenziali non sono inclusi nella repository.
-
-## GitHub Pages
-
-La pubblicazione usa il ramo `main` e la cartella `/(root)`. `index.html`, JavaScript, CSS e `assets/` sono nella radice, pronti per essere pubblicati. `.nojekyll` mantiene il sito statico senza elaborazione Jekyll. I percorsi degli asset sono relativi, compatibili con `/forma/`.
-
-## Vetrina dinamica
-
-La testata mostra un’opera alla volta, intera e mai oltre la risoluzione del file, con il solo titolo sottostante. Le 30 opere ruotano in una sequenza unica ogni 3 secondi; dissolvenza e movimento sono progressivi. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale.
+Controllati sul browser: griglia a 1440, 390 e 320 px; rapporti dei dieci slot, copertura e assenza di sovrapposizioni; un’unica dissolvenza attiva senza interruzioni fra due cambi; espansione 2/4/6/8/10; salvataggi e persistenza; percorsi artista e ricaricamento; cambio lingua; carosello eventi; riepilogo richieste; calendario configurato e vuoto; 320 px con testi ingranditi e movimento ridotto. Nessun errore JavaScript durante questi controlli.

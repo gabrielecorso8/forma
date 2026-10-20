@@ -1,286 +1,329 @@
 (() => {
   'use strict';
   const config = window.FORMA_CONFIG;
-  const works = config.artworks;
+  const works = config.artworks, artists = config.artists || [], events = config.events || [];
+  const categories = ['Astratto', 'Geometrico', 'Paesaggio'];
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const icon = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
   const read = key => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } };
-  const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Browsing remains available without storage. */ } };
-  const initial = read('forma-saved');
-  let saved = new Set(Array.isArray(initial) ? initial.filter(id => works.some(w => w.id === id)) : []);
-  let preferences = read('forma-preferences');
-  if (!preferences || !Array.isArray(preferences.styles)) preferences = null;
-  const styleOptions = ['Astratto', 'Geometrico', 'Paesaggio', 'Mi lascio consigliare'];
-  const budgetOptions = ['Fino a 1.000 €', '1.000–3.000 €', 'Oltre 3.000 €', 'Ne parliamo insieme'];
-  const intentOptions = ['Per la mia casa', 'Per la mia collezione', 'Per un regalo', 'Per il piacere di scoprire'];
-  if (preferences) preferences = {styles: preferences.styles.filter(s => styleOptions.includes(s)), budget: budgetOptions.includes(preferences.budget) ? preferences.budget : '', intent: intentOptions.includes(preferences.intent) ? preferences.intent : ''};
-  let visibleLimit = works.length;
-  let filter = 'all', quizStep = 0, draft, requestText = '', toastTimer;
-  const dialog = $('#dialog'), body = $('#dialog-body');
-  let imageSerial = 0;
-  const image = (w, fit = 'slice') => {
+  const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage is optional. */ } };
+  let language = read('forma-language') === 'en' ? 'en' : 'it';
+  const tr = (it, en) => language === 'en' ? en : it;
+  const local = value => typeof value === 'object' && value ? value[language] || value.it : value;
+  const title = w => language === 'en' ? w.titleEn || w.title : w.title;
+  const categoryName = category => ({Astratto:tr('Astratto','Abstract'),Geometrico:tr('Geometrico','Geometric'),Paesaggio:tr('Paesaggio','Landscape')})[category] || category;
+  const medium = w => language === 'it' ? w.medium : ({'Tecnica mista su tela':'Mixed media on canvas','Acrilico su tela':'Acrylic on canvas','Olio su tela':'Oil on canvas'})[w.medium] || w.medium;
+  const artistOf = w => artists.find(a => a.id === w.artistId);
+  const artistLink = w => { const a = artistOf(w); return a ? `<a class="artist-name" href="#artisti/${a.id}">${esc(a.name)}</a>` : ''; };
+  const stored = read('forma-saved');
+  const saved = new Set(Array.isArray(stored) ? stored.filter(id => works.some(w => w.id === id)) : []);
+  const limits = Object.fromEntries(categories.map(c => [c, 2]));
+  const dialog = $('#dialog'), dialogBody = $('#dialog-body');
+  let imageSerial = 0, toastTimer, requestText = '', inquiryContext = '';
+  let viewState = {index:0, list:works, zoom:1, x:0, y:0, dark:false};
+  let activeArtist = null, eventResizeObserver = null;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const aspect = w => w.image ? w.image.width / w.image.height : 0.5;
+
+  function image(w, fit = 'meet') {
     const clip = 'art-clip-' + (++imageSerial);
     const a = w.image || {src:'assets/collection.jpg',x:w.panel*512,y:0,width:512,height:1024,sheetWidth:1536,sheetHeight:1024};
-    return `<svg class="artwork" viewBox="${a.x} ${a.y} ${a.width} ${a.height}" preserveAspectRatio="xMidYMid ${fit}" style="--native-width:${a.width}px;--native-height:${a.height}px" role="img" aria-label="${esc(w.title)}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${clip}" clipPathUnits="userSpaceOnUse"><rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" fill="white" stroke="none"/></clipPath></defs><image href="${esc(a.src)}" width="${a.sheetWidth}" height="${a.sheetHeight}" clip-path="url(#${clip})" /></svg>`;
-  };
-  const saveButton = w => `<button class="save" data-save="${esc(w.id)}" aria-pressed="${saved.has(w.id)}" aria-label="${saved.has(w.id) ? 'Rimuovi' : 'Salva'} ${esc(w.title)} ${saved.has(w.id) ? 'dalle' : 'tra le'} preferite">${icon('heart')}<span>${saved.has(w.id) ? 'Salvata' : 'Salva'}</span></button>`;
-  let viewState = { index: 0, zoom: 1, x: 0, y: 0, dark: false };
-  const showcase = $('#inizio');
-  const showcaseGrid = $('.showcase-grid');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const aspectOf = w => w.image ? w.image.width / w.image.height : 0.5;
-  const squareWorks = works.filter(w => aspectOf(w) >= 0.95);
-  const portraitWorks = works.filter(w => Math.abs(aspectOf(w) - 2 / 3) < 0.02);
-  const initialCollage = [
-    squareWorks[0], squareWorks[1], squareWorks[2],
-    squareWorks[3], squareWorks[4], squareWorks[5],
-    portraitWorks[0], portraitWorks[1], portraitWorks[2], portraitWorks[3]
-  ].filter(Boolean);
-  let collageSlots = [], showcaseTimers = new Map();
-  let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
-  function canShowcaseAdvance() {
-    return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement);
+    return `<svg class="artwork" viewBox="${a.x} ${a.y} ${a.width} ${a.height}" preserveAspectRatio="xMidYMid ${fit}" style="--native-width:${a.width}px;--native-height:${a.height}px" role="img" aria-label="${esc(title(w))}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${clip}" clipPathUnits="userSpaceOnUse"><rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" fill="white" stroke="none"/></clipPath></defs><image href="${esc(a.src)}" width="${a.sheetWidth}" height="${a.sheetHeight}" clip-path="url(#${clip})"/></svg>`;
   }
-  function scheduleShowcase() {
-    showcaseTimers.forEach(timer => clearTimeout(timer));
-    showcaseTimers.clear();
-    if (!canShowcaseAdvance()) return;
-    collageSlots.forEach(slot => {
-      const delay = 3000 + Math.random() * 3000;
-      showcaseTimers.set(slot.id, setTimeout(() => rotateCollageSlot(slot), delay));
-    });
+  function saveButton(w, extra = '') {
+    const selected = saved.has(w.id);
+    return `<button type="button" class="save ${extra}" data-save="${esc(w.id)}" aria-pressed="${selected}" aria-label="${esc(tr(selected?'Rimuovi':'Salva',selected?'Remove':'Save')+' '+title(w))}">${icon('heart')}<span>${selected?tr('Salvata','Saved'):tr('Salva','Save')}</span></button>`;
   }
-  function collageTile(w, index, shape) {
-    return `<button class="collage-tile ${shape}" data-detail="${esc(w.id)}" data-slot="${index}" aria-label="Osserva ${esc(w.title)}">${image(w, 'meet')}</button>`;
+  function artCard(w) {
+    return `<article class="art-card"><button class="art-img" data-detail="${w.id}" aria-label="${esc(tr('Osserva ','View ')+title(w))}">${image(w)}</button><div class="card-top"><div><h4><button class="title-button" data-detail="${w.id}">${esc(title(w))}</button></h4>${artistLink(w)}</div>${saveButton(w)}</div><p class="card-details">${esc(medium(w))} · ${esc(w.size)}</p></article>`;
   }
-  function renderShowcase() {
-    collageSlots = initialCollage.map((work, index) => ({
-      id: `collage-${index}`,
-      work,
-      pool: index < 6 ? squareWorks : portraitWorks,
-      shape: index < 6 ? 'collage-square' : 'collage-portrait'
-    }));
-    $('#showcase-pair').innerHTML = collageSlots.map((slot, index) => collageTile(slot.work, index, slot.shape)).join('');
-    scheduleShowcase();
+  function renderShell() {
+    document.documentElement.lang = language;
+    document.title = tr('FORMA — Galleria d’arte','FORMA — Art gallery');
+    $('meta[name="description"]').content = tr('Forma. Opere, artisti ed eventi. Una selezione personale e un contatto diretto con la galleria.','Forma. Artworks, artists and events. A personal selection and direct contact with the gallery.');
+    $('#skip-link').textContent = tr('Vai al contenuto','Skip to content');
+    $('#site-header').innerHTML = `<a class="brand" href="#inizio" aria-label="${tr('Forma, pagina iniziale','Forma, home')}">FORMA<span>${tr('Galleria d’arte','Art gallery')}</span></a><nav aria-label="${tr('Navigazione principale','Main navigation')}"><a href="#eventi">${tr('Eventi','Events')}</a><a href="#opere">${tr('Opere','Artworks')}</a><a href="#artisti">${tr('Artisti','Artists')}</a><a href="#galleria">${tr('Galleria','Gallery')}</a></nav><div class="header-actions"><button id="text-size" class="text-size" aria-pressed="false">A+</button><button class="saved-nav" data-action="saved">${tr('Selezione','Selection')} <span class="count">${saved.size}</span></button><button class="contact-link" data-action="contact">${tr('Contatti','Contact')} ${icon('external-arrow')}</button><div class="language-switch" role="group" aria-label="${tr('Lingua del sito','Website language')}"><button data-lang="it" lang="it" aria-label="Italiano" aria-pressed="${language==='it'}">IT</button><span aria-hidden="true">|</span><button data-lang="en" lang="en" aria-label="English" aria-pressed="${language==='en'}">EN</button></div></div>`;
+    $('#site-footer').innerHTML = `<div class="footer-wordmark" aria-hidden="true">FORMA</div><div class="footer-bottom"><span>© ${new Date().getFullYear()} Forma</span><span>${tr('Fac simile · Opere dimostrative generate con ImageGen 2.5','Demo · Demonstration artworks generated with ImageGen 2.5')}</span><button class="plain" data-action="privacy">${tr('Privacy e dati','Privacy and data')}</button><a href="#inizio">${tr('Torna all’inizio','Back to top')} ↑</a></div>`;
+    $('#mobile-bar').innerHTML = `<button data-action="saved">${tr('Selezione','Selection')} <span class="count">${saved.size}</span></button><button data-action="contact">${tr('Contatti','Contact')} ${icon('external-arrow')}</button>`;
+    $('[data-close-text]').textContent = tr('Chiudi','Close');
+    $('.close').setAttribute('aria-label',tr('Chiudi finestra','Close window'));
+    setTextSize(read('forma-large-text') === true);
   }
-  function rotateCollageSlot(slot) {
-    if (!canShowcaseAdvance()) return;
-    const used = new Set(collageSlots.filter(other => other !== slot).map(other => other.work.id));
-    const choices = slot.pool.filter(work => work.id !== slot.work.id && !used.has(work.id));
-    const next = choices[Math.floor(Math.random() * choices.length)];
+  function renderHome() {
+    stopCollage();
+    eventResizeObserver?.disconnect();
+    $('#home').innerHTML = `
+      <section class="showcase" id="inizio" aria-labelledby="hero-title">
+        <div class="showcase-heading"><div><p class="label">${tr('Collezione / Forma','Collection / Forma')}</p><h1 id="hero-title">${tr('Studi sul colore.','Studies in colour.')}</h1></div><button class="showcase-toggle" data-action="toggle-collage"></button></div>
+        <div id="showcase-collage" class="collage" role="group" aria-label="${tr('Dieci opere della collezione','Ten works from the collection')}"></div>
+        <div class="showcase-foot"><p>${tr('Seleziona un’opera per osservarla da vicino.','Select a work to look closer.')}</p><span>${tr('30 opere, 3 collezioni.','30 works, 3 collections.')}</span><a href="#opere">${tr('Esplora le opere','Explore the artworks')} ↓</a></div>
+      </section>
+      <section id="eventi" class="events-section container" aria-labelledby="events-title">
+        <div class="section-top"><div><p class="label">${tr('In galleria','At the gallery')}</p><h2 id="events-title">${tr('Eventi','Events')}</h2></div><div class="event-navigation"><button data-event-scroll="-1" aria-label="${tr('Eventi precedenti','Previous events')}">←</button><button data-event-scroll="1" aria-label="${tr('Eventi successivi','Next events')}">→</button></div></div>
+        <p class="section-note">${tr('Programma dimostrativo · date ed eventi di esempio.','Demonstration programme · sample dates and events.')}</p><div class="event-track" tabindex="0" aria-label="${tr('Scorri gli eventi','Browse events')}">${events.map(eventCard).join('')}</div>
+      </section>
+      <section class="collection container" id="opere" aria-labelledby="collection-title">
+        <div class="section-top collection-heading"><h2 id="collection-title">${tr('Le opere','Artworks')}</h2><p class="work-disclaimer">${tr('Opere dimostrative generate con ImageGen 2.5','Demonstration artworks generated with ImageGen 2.5')}</p></div>
+        <div class="collection-index" aria-label="${tr('Collezioni','Collections')}">${categories.map(c=>`<a href="#collezione-${c.toLowerCase()}">${categoryName(c)} <span>10</span></a>`).join('')}</div>
+        <div id="collections">${categories.map(c=>`<section class="category-group" id="collezione-${c.toLowerCase()}" aria-labelledby="heading-${c}"><div class="category-heading"><h3 id="heading-${c}">${categoryName(c)}</h3><span class="category-progress" aria-live="polite"></span></div><div class="category-works art-grid" id="works-${c}"></div><div class="category-actions"><button class="line-link" data-expand="${c}" aria-controls="works-${c}"></button><button class="plain" data-collapse="${c}" hidden>${tr('Mostra meno','Show fewer')}</button></div></section>`).join('')}</div>
+      </section>
+      <section id="artisti" class="artists-section container" aria-labelledby="artists-title"><div class="section-top"><h2 id="artists-title">${tr('Artisti','Artists')}</h2><p>${tr('Sei sguardi sulla collezione.','Six perspectives on the collection.')}</p></div><p class="section-note">${tr('Profili immaginari per illustrare il sito.','Imaginary profiles to demonstrate the website.')}</p><div class="artists-list">${artists.map(a=>`<a class="artist-row" href="#artisti/${a.id}"><span class="artist-thumbnail">${image(works.find(w=>w.id===a.coverWorkId))}</span><span class="artist-row-text"><strong>${esc(a.name)}</strong><span>${esc(local(a.practice))}</span></span>${icon('external-arrow')}</a>`).join('')}</div></section>
+      <section id="preferenze" class="selection-section container" aria-labelledby="selection-title"><div class="selection-heading"><p class="label">${tr('La tua ricerca','Your exploration')}</p><h2 id="selection-title">${tr('Una selezione personale.','A personal selection.')}</h2><p>${tr('Le opere che vuoi ritrovare, tutte qui.','The works you want to return to, all here.')}</p></div><div id="saved-home"></div></section>
+      <section id="galleria" class="gallery-note container" aria-labelledby="gallery-title"><figure class="gallery-figure"><img src="assets/gallery.jpg" alt="${tr('Ambiente espositivo dimostrativo della galleria','Demonstration gallery interior')}" loading="lazy"><figcaption>${tr('Immagine dimostrativa della galleria','Demonstration gallery image')}</figcaption></figure><div><p class="label">${tr('La galleria','The gallery')}</p><h2 id="gallery-title">${tr('Uno spazio per incontrare l’arte.','A space to encounter art.')}</h2><p>${tr('La collezione prende forma anche dal vivo. Uno spazio raccolto, dove osservare le opere alla luce naturale, avvicinarsi ai materiali e prendersi il tempo di scegliere.','The collection also comes to life in person. An intimate space to see the works in natural light, get closer to their materials and take time to choose.')}</p><p>${tr('Le visite sono un’occasione per conoscere la collezione e parlare direttamente con la galleria, seguendo i propri interessi.','Visits are an opportunity to discover the collection and speak directly with the gallery, following your own interests.')}</p><div class="gallery-address">${icon('location')}<span>${esc(config.address || tr('Sede della collezione · indirizzo in aggiornamento','Collection location · address to be announced'))}</span></div></div></section>
+      <section class="contact-section container"><p class="label">${tr('Parliamone','Let’s talk')}</p><button class="contact-title" data-action="contact">${tr('Contatti','Contact')}${icon('external-arrow')}</button><div class="contact-foot"><button class="line-link" data-action="appointment">${tr('Informazioni e appuntamenti','Information and appointments')}${icon('external-arrow')}</button><button class="line-link" data-action="saved">${tr('La tua selezione','Your selection')} <span class="count">${saved.size}</span></button></div></section>`;
+    categories.forEach(renderCategory);
+    renderSelection();
+    setupEventScroll();
+    startCollage();
+  }
+  function orderedCategory(category) {
+    const list = works.filter(w=>w.category===category);
+    const featured = (config.featuredWorkIds?.[category] || []).map(id=>list.find(w=>w.id===id)).filter(Boolean).slice(0,2);
+    return [...featured, ...list.filter(w=>!featured.includes(w))];
+  }
+  function renderCategory(category) {
+    const group = $(`#collezione-${category.toLowerCase()}`);
+    const list = orderedCategory(category), visible = list.slice(0,limits[category]);
+    $('.category-works',group).innerHTML = visible.map(artCard).join('');
+    $('.category-progress',group).textContent = `${visible.length} / ${list.length}`;
+    const more = $('[data-expand]',group);
+    more.hidden = visible.length === list.length;
+    more.textContent = tr('Mostra altre 2 opere','Show 2 more works') + ' +';
+    more.setAttribute('aria-label',tr('Mostra altre 2 opere: ','Show 2 more works: ')+categoryName(category));
+    $('[data-collapse]',group).hidden = visible.length <= 2;
+  }
+  function renderSelection() {
+    const list = works.filter(w=>saved.has(w.id)), root = $('#saved-home');
+    if (!root) return;
+    root.innerHTML = list.length ? `<div class="selection-strip" tabindex="0" aria-label="${tr('Opere salvate','Saved works')}">${list.map(w=>`<article class="selection-tile"><button class="selection-image" data-detail="${w.id}" aria-label="${esc(tr('Osserva ','View ')+title(w))}">${image(w)}</button><h3><button data-detail="${w.id}">${esc(title(w))}</button></h3>${artistLink(w)}${saveButton(w)}</article>`).join('')}</div><button class="line-link" data-action="inquiry">${tr('Chiedi informazioni sulla selezione','Enquire about your selection')}${icon('external-arrow')}</button>` : `<div class="selection-empty">${icon('heart')}<p>${tr('La tua selezione inizia da un’opera. Tocca il cuore accanto ai quadri che vuoi ritrovare.','Your selection starts with one work. Tap the heart beside the paintings you want to return to.')}</p><a class="line-link" href="#opere">${tr('Esplora le opere','Explore the artworks')} ↓</a></div>`;
+  }
+
+  // Fixed ratio slots: square = 1:1, portrait = 2:3. Only one crossfade is active.
+  let collageSlots = [], collageAnimation = null, collagePending = null, collageGeneration = 0;
+  let collagePlaying = !reducedMotion.matches, collageVisible = true, lastSlot = -1, collageObserver;
+  const collageDuration = 5200;
+  function collageCanPlay() { return collagePlaying && collageVisible && !document.hidden && !dialog.open && !activeArtist; }
+  function stopCollage() {
+    collageGeneration++;
+    if (collageAnimation) { collageAnimation.onfinish = null; collageAnimation.cancel(); }
+    collageAnimation = null; collagePending = null;
+    collageObserver?.disconnect();
+  }
+  function updatePlayback() {
+    const button = $('[data-action="toggle-collage"]');
+    if (button) { button.innerHTML = `<span aria-hidden="true">${collagePlaying?'Ⅱ':'▷'}</span>${collagePlaying?tr('Pausa','Pause'):tr('Riprendi','Resume')}`; button.setAttribute('aria-label',collagePlaying?tr('Metti in pausa le dissolvenze','Pause the crossfades'):tr('Riprendi le dissolvenze','Resume the crossfades')); }
+    if (collageAnimation) { if (collageCanPlay()) collageAnimation.play(); else collageAnimation.pause(); }
+    else if (collageCanPlay()) nextCollageChange();
+  }
+  function startCollage() {
+    const squares = works.filter(w=>Math.abs(aspect(w)-1)<0.01), portraits = works.filter(w=>Math.abs(aspect(w)-2/3)<0.01);
+    const shapes = ['square','portrait','square','portrait','square','portrait','square','square','square','portrait'];
+    let s=0,p=0;
+    collageSlots = shapes.map((shape,index)=>({index,shape,pool:shape==='square'?squares:portraits,work:shape==='square'?squares[s++]:portraits[p++]}));
+    $('#showcase-collage').innerHTML = collageSlots.map(slot=>`<button class="collage-tile slot-${slot.index+1}" data-collage-slot="${slot.index}" aria-label="${esc(tr('Osserva ','View ')+title(slot.work))}"><span class="collage-layer">${image(slot.work)}</span></button>`).join('');
+    collageVisible = !activeArtist;
+    updatePlayback();
+    if ('IntersectionObserver' in window) {
+      collageObserver = new IntersectionObserver(entries=>{collageVisible=entries[0].isIntersecting;updatePlayback();},{threshold:0});
+      collageObserver.observe($('#showcase-collage'));
+    }
+  }
+  function nextCollageChange() {
+    if (!collageCanPlay() || collageAnimation || !collageSlots.length) return;
+    const eligible = collageSlots.filter(slot=>slot.index!==lastSlot);
+    const slot = eligible[Math.floor(Math.random()*eligible.length)];
+    const used = new Set(collageSlots.map(other=>other.work.id));
+    const candidates = slot.pool.filter(w=>!used.has(w.id));
+    const next = candidates[Math.floor(Math.random()*candidates.length)];
     if (!next) return;
-    slot.work = next;
-    const tile = $(`[data-slot="${collageSlots.indexOf(slot)}"]`, showcaseGrid);
+    const tile = $(`[data-collage-slot="${slot.index}"]`), incoming = document.createElement('span');
     if (!tile) return;
-    tile.classList.remove('is-entering');
-    tile.dataset.detail = next.id;
-    tile.setAttribute('aria-label', `Osserva ${next.title}`);
-    tile.innerHTML = image(next, 'meet');
-    requestAnimationFrame(() => tile.classList.add('is-entering'));
-    const delay = 3000 + Math.random() * 3000;
-    showcaseTimers.set(slot.id, setTimeout(() => rotateCollageSlot(slot), delay));
+    incoming.className = 'collage-layer incoming';
+    incoming.setAttribute('aria-hidden','true');
+    incoming.innerHTML = image(next);
+    tile.append(incoming);
+    collagePending = {slot,next};
+    lastSlot = slot.index;
+    const generation = collageGeneration;
+    collageAnimation = incoming.animate([{opacity:0},{opacity:1}],{duration:collageDuration,easing:'linear',fill:'forwards'});
+    collageAnimation.onfinish = () => {
+      if (generation!==collageGeneration) return;
+      tile.firstElementChild.remove();
+      incoming.classList.remove('incoming');incoming.removeAttribute('aria-hidden');incoming.style.opacity='1';
+      slot.work = next;tile.setAttribute('aria-label',tr('Osserva ','View ')+title(next));
+      collageAnimation.cancel();collageAnimation=null;collagePending=null;
+      nextCollageChange();
+    };
   }
-  function updateShowcasePlayback() {
-    $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
-    $('#showcase-play-icon').textContent = showcasePlaying ? 'Ⅱ' : '▷';
-    $('[data-showcase="toggle"]').setAttribute('aria-label',showcasePlaying?'Metti in pausa lo scorrimento automatico':'Avvia lo scorrimento automatico');
-    scheduleShowcase();
+  document.addEventListener('visibilitychange',updatePlayback);
+  document.addEventListener('focusin',e=>{if(e.target.closest('#showcase-collage'))updatePlayback();});
+  document.addEventListener('focusout',()=>queueMicrotask(updatePlayback));
+  reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)collagePlaying=false;updatePlayback();});
+
+  function formatDate(value, options={day:'numeric',month:'long',year:'numeric'}) {
+    return new Intl.DateTimeFormat(language==='en'?'en-GB':'it-IT',options).format(new Date(value+'T12:00:00'));
   }
-  function startShowcase() {
-    updateShowcasePlayback();renderShowcase();
-    showcaseGrid.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'){showcaseHovered=true;scheduleShowcase();}});
-    showcaseGrid.addEventListener('pointerleave',()=>{showcaseHovered=false;scheduleShowcase();});
-    showcaseGrid.addEventListener('focusin',scheduleShowcase);
-    showcaseGrid.addEventListener('focusout',()=>queueMicrotask(scheduleShowcase));
-    document.addEventListener('visibilitychange',scheduleShowcase);
-    dialog.addEventListener('close',scheduleShowcase);
-    reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)showcasePlaying=false;updateShowcasePlayback();});
-    if('IntersectionObserver' in window) new IntersectionObserver(entries=>{showcaseVisible=entries[0].isIntersecting;scheduleShowcase();},{threshold:0}).observe(showcase);
+  function eventDate(event) { return formatDate(event.date,{day:'numeric',month:'short'})+(event.endDate?' — '+formatDate(event.endDate,{day:'numeric',month:'short',year:'numeric'}):' '+event.date.slice(0,4)); }
+  function eventCard(event) {
+    return `<article class="event-card"><button class="event-cover" data-event="${event.id}" aria-label="${esc(local(event.title))}">${event.coverWorkIds.map(id=>`<span>${image(works.find(w=>w.id===id))}</span>`).join('')}</button><p class="event-meta">${esc(local(event.kind))} · ${esc(eventDate(event))}</p><h3><button data-event="${event.id}">${esc(local(event.title))}</button></h3><p class="event-info">${esc(event.time)}<br>${esc(local(event.admission))}</p><button class="line-link" data-event="${event.id}">${tr('Dettagli dell’evento','Event details')}${icon('external-arrow')}</button></article>`;
   }
-  function notify(message) { $('.toast').textContent = message; $('.toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('.toast').classList.remove('visible'), 3000); }
-  function updateCounts() { $$('.count').forEach(el => el.textContent = saved.size); }
-  function renderWorks() {
-    const matched = works.filter(w => filter === 'all' || w.category === filter);
-    const visible = matched.slice(0,visibleLimit);
-    $('#art-grid').dataset.filtered = filter !== 'all';
-    $('#art-grid').innerHTML = visible.map(w => `<article class="art-card${aspectOf(w) >= 0.8 ? ' square-work' : ' portrait-work'}"><button class="art-img" data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}">${image(w)}</button><div class="card-top"><div><p class="card-category">${String(works.indexOf(w) + 1).padStart(2,'0')} / ${esc(w.category)}</p><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3></div>${saveButton(w)}</div><p class="card-details">${esc(w.medium)}<br>${esc(w.size)}</p><button class="detail-link" data-detail="${esc(w.id)}">Osserva l’opera ${icon('arrow')}</button></article>`).join('');
-    $('#results-count').textContent = `${matched.length} ${matched.length === 1 ? 'opera' : 'opere'}`;
-    $('#catalog-progress').textContent = `Mostrate ${visible.length} di ${matched.length} opere`;
-    const more = $('[data-action="more-works"]');
-    more.hidden = visible.length >= matched.length;
-    more.textContent = `Mostra altre opere (${matched.length-visible.length})`;
-    $$('.filter').forEach(b=>{const category=b.dataset.filter;const count=category==='all'?works.length:works.filter(w=>w.category===category).length;b.textContent=`${category==='all'?'Tutte':category} (${count})`;});
+  function setupEventScroll() {
+    const track=$('.event-track');
+    const update=()=>{$('[data-event-scroll="-1"]').disabled=track.scrollLeft<4;$('[data-event-scroll="1"]').disabled=track.scrollLeft+track.clientWidth>=track.scrollWidth-4;};
+    track.addEventListener('scroll',update,{passive:true});
+    eventResizeObserver=new ResizeObserver(update);eventResizeObserver.observe(track);requestAnimationFrame(update);
+  }
+  function showEvent(id) {
+    const event=events.find(e=>e.id===id);if(!event)return;
+    open('event',`<p class="modal-eyebrow">${tr('EVENTO DIMOSTRATIVO','DEMONSTRATION EVENT')}</p><h2 id="dialog-title">${esc(local(event.title))}</h2><p>${esc(local(event.description))}</p><dl class="event-facts"><div><dt>${tr('Quando','When')}</dt><dd>${esc(eventDate(event))}<br>${esc(event.time)}</dd></div><div><dt>${tr('Dove','Where')}</dt><dd>${esc(config.address||tr('Sede della collezione · indirizzo in aggiornamento','Collection location · address to be announced'))}</dd></div><div><dt>${tr('Accesso','Admission')}</dt><dd>${esc(local(event.admission))}</dd></div></dl><button class="button" data-event-inquiry="${id}">${tr('Chiedi informazioni','Ask for information')}${icon('arrow')}</button><p class="demo-note">${tr('Titolo, date e programma sono esempi dimostrativi.','The title, dates and programme are demonstration examples.')}</p>`);
+  }
+  function route() {
+    const id=location.hash.startsWith('#artisti/')?location.hash.slice(9).split('/')[0]:null;
+    activeArtist=artists.find(a=>a.id===id)||null;
+    $('#home').hidden=!!activeArtist;$('#artist-page').hidden=!activeArtist;
+    if(activeArtist){
+      const a=activeArtist,list=works.filter(w=>w.artistId===a.id),cover=works.find(w=>w.id===a.coverWorkId);
+      $('#artist-page').innerHTML=`<a class="line-link back-artists" href="#artisti">← ${tr('Tutti gli artisti','All artists')}</a><div class="artist-intro"><div><p class="label">${tr('Profilo immaginario / ','Imaginary profile / ')+categoryName(a.category)}</p><h1 tabindex="-1">${esc(a.name)}</h1><p class="artist-practice">${esc(local(a.practice))}</p><p class="artist-bio">${esc(local(a.bio))}</p><a class="line-link" href="#artisti/${a.id}/opere">${tr('Le opere in collezione','Works in the collection')} ↓</a></div><div class="artist-hero-art">${image(cover)}</div></div><div class="artist-journey"><h2>${tr('Il percorso','The practice')}</h2><div>${a.journey.map((step,i)=>`<article><span class="label">0${i+1}</span><h3>${esc(local(step.title))}</h3><p>${esc(local(step.text))}</p></article>`).join('')}</div></div><section id="percorso-opere"><div class="category-heading"><h2>${tr('Le opere','Artworks')}</h2><span>${list.length} ${tr('opere dimostrative','demonstration works')}</span></div><div class="art-grid artist-works">${list.map(artCard).join('')}</div></section><a class="line-link back-artists" href="#artisti">← ${tr('Tutti gli artisti','All artists')}</a>`;
+      document.title=`${a.name} — FORMA`;
+      requestAnimationFrame(()=>{if(location.hash.endsWith('/opere'))$('#percorso-opere').scrollIntoView({behavior:'instant'});else{window.scrollTo({top:0,behavior:'instant'});$('#artist-page h1').focus({preventScroll:true});}});
+    } else {
+      document.title=tr('FORMA — Galleria d’arte','FORMA — Art gallery');
+      if(location.hash)requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior:'instant'}));
+    }
+    updatePlayback();
+  }
+  window.addEventListener('hashchange',()=>{if(dialog.open)dialog.close();route();});
+
+  function notify(message) { const toast=$('.toast');toast.textContent=message;toast.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('visible'),3000); }
+  function updateSaved() {
+    $$('.count').forEach(n=>n.textContent=saved.size);
+    $$('[data-save]').forEach(button=>{const w=works.find(w=>w.id===button.dataset.save);const selected=saved.has(w.id);button.setAttribute('aria-pressed',selected);button.setAttribute('aria-label',tr(selected?'Rimuovi ':'Salva ',selected?'Remove ':'Save ')+title(w));$('span',button).textContent=selected?tr('Salvata','Saved'):tr('Salva','Save');});
+    renderSelection();
+    if(dialog.open&&dialog.dataset.view==='saved')renderSaved();
   }
   function toggleSaved(id) {
-    if (!works.some(w => w.id === id)) return;
-    saved.has(id) ? saved.delete(id) : saved.add(id);
-    persist('forma-saved', [...saved]); updateCounts(); renderWorks();
-    $$(`[data-save="${id}"]`, dialog).forEach(el => { el.setAttribute('aria-pressed', saved.has(id)); el.setAttribute('aria-label', `${saved.has(id) ? 'Rimuovi' : 'Salva'} ${works.find(w => w.id === id).title} ${saved.has(id) ? 'dalle' : 'tra le'} preferite`); });
-    if (dialog.dataset.view === 'saved') renderSaved();
-    notify(saved.has(id) ? 'Opera aggiunta alle tue preferite' : 'Opera rimossa dalle preferite');
+    if(!works.some(w=>w.id===id))return;
+    saved.has(id)?saved.delete(id):saved.add(id);persist('forma-saved',[...saved]);updateSaved();
+    notify(saved.has(id)?tr('Opera aggiunta alla selezione','Work added to your selection'):tr('Opera rimossa dalla selezione','Work removed from your selection'));
   }
-  function open(view, html) { dialog.classList.toggle('viewer', view === 'detail'); dialog.dataset.view = view; body.innerHTML = html; if (!dialog.open) dialog.showModal(); scheduleShowcase(); const heading = $('#dialog-title'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({preventScroll:true}); } dialog.scrollTop = 0; }
+  function open(view,html) {
+    dialog.classList.toggle('viewer',view==='detail');dialog.dataset.view=view;dialogBody.innerHTML=html;
+    if(!dialog.open)dialog.showModal();updatePlayback();
+    const h=$('#dialog-title');if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true});}dialog.scrollTop=0;
+  }
   function detail(id) {
-    const index = works.findIndex(w => w.id === id); if (index < 0) return;
-    viewState = {index, zoom:1, x:0, y:0, dark:viewState.dark};
-    renderViewer();
+    const list=activeArtist?works.filter(w=>w.artistId===activeArtist.id):works;
+    const index=list.findIndex(w=>w.id===id);if(index<0)return;
+    viewState={index,list,zoom:1,x:0,y:0,dark:viewState.dark};renderViewer();
   }
   function renderViewer() {
-    const w = works[viewState.index];
-    open('detail', `<div class="viewer-top"><strong>FORMA</strong><span>Sala di osservazione / ${String(viewState.index+1).padStart(2,'0')}</span></div><div class="viewer-layout"><div class="viewer-image-area ${viewState.dark ? 'dark' : ''}"><div class="viewer-viewport" aria-label="Opera ingrandibile: usa i comandi sottostanti"><div class="viewer-canvas">${image(w,'meet')}</div></div><div class="viewer-controls"><div class="zoom-control"><button data-view="zoom-out" aria-label="Riduci ingrandimento" disabled>−</button><output id="zoom-output" aria-live="polite">100%</output><button data-view="zoom-in" aria-label="Ingrandisci opera">+</button></div><button data-view="reset">Ripristina</button><button data-view="background" aria-pressed="${viewState.dark}">Fondo ${viewState.dark ? 'chiaro' : 'scuro'}</button></div></div><div class="viewer-info"><p class="viewer-kicker modal-eyebrow">${String(viewState.index+1).padStart(2,'0')} / ${esc(w.category)}</p><h2 id="dialog-title">${esc(w.title)}</h2><p>${esc(w.medium)}<br>${esc(w.size)}</p><p class="viewer-description">${esc(w.description)}</p><p class="viewer-hint">Ingrandisci con +. Poi trascina l’immagine per esplorare i dettagli.</p><div class="modal-actions"><button class="button" data-inquire="${esc(w.id)}">Informazioni sull’opera ${icon('external-arrow')}</button><button class="button secondary" data-save="${esc(w.id)}" aria-pressed="${saved.has(w.id)}">${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}</button></div><div class="viewer-nav"><button data-view="previous" aria-label="Opera precedente">←</button><span>${viewState.index+1} / ${works.length}</span><button data-view="next" aria-label="Opera successiva">→</button></div><p class="demo-note">Opera dimostrativa generata con IA.</p></div></div>`);
+    const w=viewState.list[viewState.index];
+    open('detail',`<div class="viewer-top"><strong>FORMA</strong><span>${tr('Sala di osservazione','Viewing room')} / ${String(works.indexOf(w)+1).padStart(2,'0')}</span></div><div class="viewer-layout"><div class="viewer-image-area ${viewState.dark?'dark':''}"><div class="viewer-viewport" aria-label="${tr('Opera ingrandibile: usa i comandi sottostanti','Zoomable artwork: use the controls below')}"><div class="viewer-canvas">${image(w)}</div></div><div class="viewer-controls"><div class="zoom-control"><button data-view="zoom-out" aria-label="${tr('Riduci ingrandimento','Zoom out')}" disabled>−</button><output id="zoom-output" aria-live="polite">100%</output><button data-view="zoom-in" aria-label="${tr('Ingrandisci opera','Zoom in')}">+</button></div><button data-view="reset">${tr('Ripristina','Reset')}</button><button data-view="background" aria-pressed="${viewState.dark}">${viewState.dark?tr('Fondo chiaro','Light background'):tr('Fondo scuro','Dark background')}</button></div></div><div class="viewer-info"><p class="modal-eyebrow">${categoryName(w.category)}</p><h2 id="dialog-title">${esc(title(w))}</h2>${artistLink(w)}<p class="viewer-medium">${esc(medium(w))}<br>${esc(w.size)}</p><p class="viewer-description">${esc(language==='en'?w.descriptionEn:w.description)}</p><p class="viewer-hint">${tr('Ingrandisci con +. Poi trascina l’immagine per esplorare i dettagli.','Zoom in with +, then drag the image to explore its details.')}</p><div class="modal-actions"><button class="button" data-inquire="${w.id}">${tr('Informazioni sull’opera','Enquire about this work')}${icon('external-arrow')}</button>${saveButton(w,'button secondary')}</div><div class="viewer-nav"><button data-view="previous" aria-label="${tr('Opera precedente','Previous work')}">←</button><span>${viewState.index+1} / ${viewState.list.length}</span><button data-view="next" aria-label="${tr('Opera successiva','Next work')}">→</button></div><p class="demo-note">${tr('Opera dimostrativa generata con ImageGen 2.5. Artista immaginario.','Demonstration artwork generated with ImageGen 2.5. Imaginary artist.')}</p></div></div>`);
     setupPan();
   }
   function updateZoom() {
-    const canvas = $('.viewer-canvas',dialog), viewport = $('.viewer-viewport',dialog);
-    if (!canvas) return;
-    const bounds = viewport.getBoundingClientRect();
-    const maxX = bounds.width * (viewState.zoom-1)/2, maxY = bounds.height * (viewState.zoom-1)/2;
-    viewState.x = Math.min(maxX,Math.max(-maxX,viewState.x));
-    viewState.y = Math.min(maxY,Math.max(-maxY,viewState.y));
-    canvas.style.setProperty('--zoom',viewState.zoom);
-    canvas.style.setProperty('--pan-x',`${viewState.x}px`);
-    canvas.style.setProperty('--pan-y',`${viewState.y}px`);
-    viewport.classList.toggle('is-zoomed',viewState.zoom>1);
-    $('#zoom-output').textContent = `${Math.round(viewState.zoom*100)}%`;
-    $('[data-view="zoom-out"]').disabled = viewState.zoom<=1;
-    $('[data-view="zoom-in"]').disabled = viewState.zoom>=3;
+    const canvas=$('.viewer-canvas',dialog),viewport=$('.viewer-viewport',dialog);if(!canvas)return;
+    const bounds=viewport.getBoundingClientRect(),maxX=bounds.width*(viewState.zoom-1)/2,maxY=bounds.height*(viewState.zoom-1)/2;
+    viewState.x=Math.min(maxX,Math.max(-maxX,viewState.x));viewState.y=Math.min(maxY,Math.max(-maxY,viewState.y));
+    canvas.style.setProperty('--zoom',viewState.zoom);canvas.style.setProperty('--pan-x',`${viewState.x}px`);canvas.style.setProperty('--pan-y',`${viewState.y}px`);
+    viewport.classList.toggle('is-zoomed',viewState.zoom>1);$('#zoom-output').textContent=`${Math.round(viewState.zoom*100)}%`;
+    $('[data-view="zoom-out"]').disabled=viewState.zoom<=1;$('[data-view="zoom-in"]').disabled=viewState.zoom>=3;
   }
   function setupPan() {
-    const viewport = $('.viewer-viewport',dialog); let pointer = null;
-    viewport.addEventListener('pointerdown',e=>{if(viewState.zoom<=1 || (e.pointerType==='mouse' && e.button!==0))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:viewState.x,originY:viewState.y};viewport.setPointerCapture(e.pointerId);viewport.classList.add('dragging');});
+    const viewport=$('.viewer-viewport',dialog);let pointer=null;
+    viewport.addEventListener('pointerdown',e=>{if(viewState.zoom<=1||(e.pointerType==='mouse'&&e.button!==0))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:viewState.x,originY:viewState.y};viewport.setPointerCapture(e.pointerId);viewport.classList.add('dragging');});
     viewport.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;viewState.x=pointer.originX+e.clientX-pointer.x;viewState.y=pointer.originY+e.clientY-pointer.y;updateZoom();});
-    const stop=()=>{pointer=null;viewport.classList.remove('dragging');};
-    viewport.addEventListener('pointerup',stop);viewport.addEventListener('pointercancel',stop);viewport.addEventListener('lostpointercapture',stop);
+    const stop=()=>{pointer=null;viewport.classList.remove('dragging');};['pointerup','pointercancel','lostpointercapture'].forEach(event=>viewport.addEventListener(event,stop));
   }
   function viewerAction(action) {
-    if(action==='previous'||action==='next'){viewState.index=(viewState.index+(action==='next'?1:-1)+works.length)%works.length;viewState.zoom=1;viewState.x=0;viewState.y=0;renderViewer();}
-    else if(action==='background'){viewState.dark=!viewState.dark;$('.viewer-image-area').classList.toggle('dark',viewState.dark);const b=$('[data-view="background"]');b.textContent=`Fondo ${viewState.dark?'chiaro':'scuro'}`;b.setAttribute('aria-pressed',viewState.dark);}
+    if(action==='next'||action==='previous'){viewState.index=(viewState.index+(action==='next'?1:-1)+viewState.list.length)%viewState.list.length;viewState.zoom=1;viewState.x=0;viewState.y=0;renderViewer();}
+    else if(action==='background'){viewState.dark=!viewState.dark;$('.viewer-image-area').classList.toggle('dark',viewState.dark);const button=$('[data-view="background"]');button.textContent=viewState.dark?tr('Fondo chiaro','Light background'):tr('Fondo scuro','Dark background');button.setAttribute('aria-pressed',viewState.dark);}
     else {if(action==='reset'){viewState.zoom=1;viewState.x=0;viewState.y=0;}else viewState.zoom=Math.min(3,Math.max(1,viewState.zoom+(action==='zoom-in'?.5:-.5)));updateZoom();}
   }
+  function savedSummary(list) { return `<ul class="contact-works">${list.map(w=>`<li><span class="contact-work-image">${image(w)}</span><span><strong>${esc(title(w))}</strong><small>${esc(artistOf(w)?.name||'')}</small></span></li>`).join('')}</ul>`; }
   function renderSaved() {
-    const list = works.filter(w => saved.has(w.id));
-    open('saved', `<p class="modal-eyebrow">LA TUA SELEZIONE</p><h2 id="dialog-title">Le tue preferite${list.length ? ` (${list.length})` : ''}</h2>${list.length ? `<p>Le opere salvate su questo dispositivo.</p>${list.map(w => `<div class="saved-item">${image(w)}<div><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3><p>${esc(w.category)} · ${esc(w.size)}</p></div>${saveButton(w)}</div>`).join('')}<div class="modal-actions"><button class="button" data-action="contact">Informazioni sulle opere ${icon('arrow')}</button><button class="button secondary" data-action="browse">Continua a esplorare</button></div>` : `<div class="empty">${icon('heart')}<p>Non hai ancora salvato un’opera.<br>Tocca il cuore accanto a quelle che ti piacciono.</p><button class="button" data-action="browse">Scopri le opere ${icon('arrow')}</button></div>`}`);
-  }
-  function startQuiz() { quizStep = 0; draft = preferences ? { ...preferences, styles: [...preferences.styles] } : { styles: [], budget: '', intent: '' }; renderQuiz(); }
-  function renderQuiz() {
-    const questions = [
-      { title: 'Quali stili ti interessano?', text: 'Puoi indicare più stili.', options: styleOptions, key: 'styles' },
-      { title: 'Hai un budget in mente?', text: 'È solo un’indicazione. Puoi anche parlarne con noi.', options: budgetOptions, key: 'budget' },
-      { title: 'Per quale occasione?', text: 'Indica la destinazione dell’opera.', options: intentOptions, key: 'intent' }
-    ];
-    const q = questions[quizStep];
-    open('quiz', `<p class="modal-eyebrow">LE TUE PREFERENZE · ${quizStep + 1} DI 3</p><div class="quiz-progress" aria-hidden="true">${questions.map((_,i) => `<span class="${i <= quizStep ? 'done' : ''}"></span>`).join('')}</div><h2 id="dialog-title">${q.title}</h2><p>${q.text}</p><div class="choices" role="group" aria-label="${q.title}">${q.options.map(value => `<button class="choice" data-choice="${esc(value)}" data-key="${q.key}" aria-pressed="${q.key === 'styles' ? draft.styles.includes(value) : draft[q.key] === value}">${esc(value)}</button>`).join('')}</div><div class="quiz-footer"><button class="text-link" data-action="quiz-back">${quizStep ? '← Indietro' : 'Chiudi'}</button><button class="button" data-action="quiz-next" ${!(quizStep === 0 ? draft.styles.length : draft[q.key]) ? 'disabled' : ''}>${quizStep < 2 ? 'Continua' : 'Vedi la tua selezione'} ${icon('arrow')}</button></div>`);
-  }
-  function finishQuiz() {
-    preferences = {...draft, styles:[...draft.styles]}; persist('forma-preferences', preferences);
-    const recommended = works.filter(w => preferences.styles.includes(w.category));
-    open('quiz-result', `<p class="modal-eyebrow">LE TUE PREFERENZE</p><h2 id="dialog-title">Opere selezionate.</h2><p>${recommended.length ? 'Abbiamo raccolto le opere degli stili che hai scelto.' : 'Ti proponiamo di iniziare esplorando tutti gli stili.'} Le preferenze saranno incluse nella richiesta.</p><div class="contact-summary"><strong>I tuoi interessi</strong><br>${esc(preferences.styles.join(', '))}<br>${esc(preferences.budget)} · ${esc(preferences.intent)}</div>${(recommended.length ? recommended : works).map(w => `<div class="saved-item">${image(w)}<div><h3><button class="title-button" data-detail="${esc(w.id)}">${esc(w.title)}</button></h3><p>${esc(w.category)}</p></div>${saveButton(w)}</div>`).join('')}<div class="modal-actions"><button class="button" data-action="contact">Prepara una richiesta ${icon('chat')}</button><button class="button secondary" data-action="quiz">Modifica preferenze</button></div><p class="demo-note">L’abbinamento usa gli stili selezionati. Il budget e l’occasione vengono inclusi nella richiesta per la galleria.</p>`);
+    const list=works.filter(w=>saved.has(w.id));
+    open('saved',`<p class="modal-eyebrow">${tr('LA TUA SELEZIONE','YOUR SELECTION')}</p><h2 id="dialog-title">${tr('Le tue preferite','Your favourites')} (${list.length})</h2>${list.length?`<div class="saved-list">${list.map(w=>`<div class="saved-item"><button class="saved-image" data-detail="${w.id}" aria-label="${esc(tr('Osserva ','View ')+title(w))}">${image(w)}</button><div><h3><button class="title-button" data-detail="${w.id}">${esc(title(w))}</button></h3>${artistLink(w)}</div>${saveButton(w)}</div>`).join('')}</div><div class="modal-actions"><button class="button" data-action="inquiry">${tr('Informazioni sulle opere','Enquire about the works')}${icon('arrow')}</button><button class="button secondary" data-action="browse">${tr('Continua a esplorare','Continue exploring')}</button></div>`:`<p>${tr('Non hai ancora salvato un’opera. Tocca il cuore accanto ai quadri che ti piacciono.','You haven’t saved a work yet. Tap the heart beside the paintings you like.')}</p><button class="button" data-action="browse">${tr('Scopri le opere','Discover the artworks')}${icon('arrow')}</button>`}`);
   }
   function contact() {
-    const address = String(config.address || '').trim();
-    const hours = String(config.openingHours || '').trim();
-    const phone = String(config.phone || '').trim();
-    const email = String(config.email || '').trim();
-    const whatsapp = String(config.whatsapp || '').replace(/[^0-9]/g,'');
-    const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
-    const directLink = (href, symbol, title, detail) => href
-      ? `<a class="contact-tile" href="${esc(href)}" ${href.startsWith('https:') ? 'target="_blank" rel="noopener noreferrer"' : ''}>${icon(symbol)}<span><strong>${esc(title)}</strong><small>${esc(detail)}</small></span>${icon('external-arrow')}</a>`
-      : `<div class="contact-tile is-unavailable" aria-disabled="true">${icon(symbol)}<span><strong>${esc(title)}</strong><small>${esc(detail || 'Dato da inserire')}</small></span></div>`;
-    const socials = [['facebook','Facebook',config.facebook],['instagram','Instagram',config.instagram],['x','X',config.x]]
-      .map(([symbol,label,url]) => /^https:\/\/(www\.)?(facebook\.com|instagram\.com|x\.com)\//.test(String(url || ''))
-        ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${icon(symbol)}</a>`
-        : `<span aria-label="${label} non configurato" title="${label}: dato da inserire">${icon(symbol)}</span>`).join('');
-    open('contact-hub', `<p class="modal-eyebrow">CONTATTI</p><h2 id="dialog-title">La galleria, in modo diretto.</h2><p>Indirizzo, orari e canali di contatto.</p><div class="contact-grid">
-      ${directLink(mapUrl,'location','Dove siamo',address || 'Indirizzo da inserire')}
-      <button class="contact-tile" data-action="appointment">${icon('clock')}<span><strong>Orari e visite</strong><small>${esc(hours || 'Orari da inserire')} · Prenota una visita</small></span>${icon('external-arrow')}</button>
-      ${directLink(phone ? `tel:${phone.replace(/[^+\d]/g,'')}` : '', 'phone','Telefono',phone || 'Numero da inserire')}
-      ${directLink(email ? `mailto:${email}` : '', 'mail','Email',email || 'Indirizzo da inserire')}
-      ${directLink(/^[1-9][0-9]{7,14}$/.test(whatsapp) ? `https://wa.me/${whatsapp}` : '', 'whatsapp','WhatsApp',config.whatsapp ? 'Apri la conversazione' : 'Numero da inserire')}
-      <div class="contact-tile contact-social">${icon('social')}<span><strong>Social</strong><small>Segui la galleria</small><span class="social-links">${socials}</span></span></div>
-    </div><div class="modal-actions"><button class="button" data-action="inquiry">Scrivi un messaggio ${icon('chat')}</button><button class="button secondary" data-action="appointment">Informazioni e appuntamenti ${icon('arrow')}</button></div>`);
+    const address=String(config.address||'').trim(),phone=String(config.phone||'').trim(),email=String(config.email||'').trim(),whatsapp=String(config.whatsapp||'').replace(/[^0-9]/g,'');
+    const direct=(href,symbol,label,value)=>href?`<a class="contact-tile" href="${esc(href)}" ${href.startsWith('https:')?'target="_blank" rel="noopener noreferrer"':''}>${icon(symbol)}<span><strong>${label}</strong><small>${esc(value)}</small></span>${icon('external-arrow')}</a>`:`<div class="contact-tile is-unavailable">${icon(symbol)}<span><strong>${label}</strong><small>${tr('Dato da inserire','Details to be added')}</small></span></div>`;
+    const socials=[['facebook','Facebook',config.facebook],['instagram','Instagram',config.instagram],['x','X',config.x]].map(([symbol,label,url])=>/^https:\/\/(www\.)?(facebook\.com|instagram\.com|x\.com)\//.test(String(url||''))?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${icon(symbol)}</a>`:`<span aria-label="${label}: ${tr('da configurare','not configured')}">${icon(symbol)}</span>`).join('');
+    open('contact',`<p class="modal-eyebrow">${tr('CONTATTI','CONTACT')}</p><h2 id="dialog-title">${tr('La galleria, in modo diretto.','A direct line to the gallery.')}</h2><div class="contact-grid">${direct(address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`:'','location',tr('Dove siamo','Find us'),address)}<button class="contact-tile" data-action="appointment">${icon('clock')}<span><strong>${tr('Orari e visite','Opening hours and visits')}</strong><small>${esc(config.openingHours||tr('Visite su appuntamento','Visits by appointment'))}</small></span>${icon('external-arrow')}</button>${direct(phone?`tel:${phone.replace(/[^+\d]/g,'')}`:'','phone',tr('Telefono','Phone'),phone)}${direct(email?`mailto:${email}`:'','mail','Email',email)}${direct(/^[1-9][0-9]{7,14}$/.test(whatsapp)?`https://wa.me/${whatsapp}`:'','whatsapp','WhatsApp',tr('Apri la conversazione','Start a conversation'))}<div class="contact-tile contact-social">${icon('social')}<span><strong>Social</strong><span class="social-links">${socials}</span></span></div></div><button class="button" data-action="inquiry">${tr('Scrivi un messaggio','Write a message')}${icon('arrow')}</button>`);
   }
-  function contactForm(workId) {
-    const selected = workId ? works.filter(w => w.id === workId) : works.filter(w => saved.has(w.id));
-    const selection = selected.map(w => w.title).join(', ');
-    const channels = config.email || config.phone || config.facebook || config.whatsapp;
-    open('contact', `<p class="modal-eyebrow">CONTATTI</p><h2 id="dialog-title">Scrivi alla galleria.</h2><p>Fai una domanda sulle opere o sulle preferenze che hai scelto.</p>${selection || preferences ? `<div class="contact-summary">${selection ? `<strong>Le opere che ti interessano</strong><ul class="contact-works" aria-label="Opere selezionate">${selected.map(w => `<li><span class="contact-work-image">${image(w,'meet')}</span><span class="contact-work-title">${esc(w.title)}</span></li>`).join('')}</ul>` : ''}${preferences ? `<p style="margin:8px 0 0;font-size:13px">Preferenze: ${esc(preferences.styles.join(', '))} · ${esc(preferences.budget)} · ${esc(preferences.intent)}</p>` : ''}</div>` : ''}<form id="contact-form"><div class="form-grid"><label class="field">Il tuo nome<input name="name" autocomplete="given-name" required maxlength="100" placeholder="Come ti chiami?"></label><label class="field">Preferisco essere contattato via<select name="channel"><option value="Email">Email</option><option value="Telefono">Telefono</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option></select></label></div><label class="field" id="reply-field">La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it"></label><label class="field">Cosa vorresti sapere? <small>Facoltativo</small><textarea name="message" maxlength="2000" placeholder="Ad esempio: mi piacerebbe vedere quest’opera in galleria."></textarea></label><input type="hidden" name="selection" value="${esc(selection)}"><button class="button" type="submit">Prepara la richiesta ${icon('arrow')}</button><p class="demo-note">${channels ? 'Potrai controllare la richiesta e scegliere come inviarla. Il sito non invia messaggi automaticamente.' : 'Questo è un fac simile: nessun messaggio viene inviato. Potrai copiare o scaricare la richiesta di esempio.'} I dati del modulo non vengono salvati sul sito.</p></form>${config.phone ? `<p><a class="text-link" href="tel:${esc(config.phone.replace(/[^+\d]/g,''))}">Preferisci chiamare? ${esc(config.phone)}</a></p>` : ''}${config.facebook && /^https:\/\/(www\.)?(facebook\.com|m\.me)\//.test(config.facebook) ? `<a class="text-link" href="${esc(config.facebook)}" target="_blank" rel="noopener noreferrer">Scrivi su Facebook ${icon('arrow')}</a>` : ''}`);
+  function replyField(channel) {
+    const phone=channel==='WhatsApp'||channel==='Phone';
+    return `${phone?tr('Il tuo numero di telefono','Your phone number'):tr('La tua email','Your email')}<input name="reply" type="${phone?'tel':'email'}" autocomplete="${phone?'tel':'email'}" required maxlength="150" placeholder="${phone?tr('Con prefisso internazionale','Include country code'):'nome@esempio.it'}">`;
   }
-  function appointmentSlots(date) {
-    const slots = Array.isArray(config.visitSlots?.[date]) ? config.visitSlots[date] : [];
-    const valid = slots.filter(time => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time));
-    return valid.length
-      ? `<fieldset class="slot-picker"><legend>Orari disponibili</legend><div class="slot-options">${valid.map((time,i)=>`<label><input type="radio" name="slot" value="${esc(time)}" ${i===0?'checked':''}><span>${esc(time)}</span></label>`).join('')}</div></fieldset>`
-      : `<p class="slots-empty">Per questa data non ci sono orari pubblicati. Scegli un altro giorno.</p>`;
+  function contactForm(workId, context='') {
+    inquiryContext=context;
+    const list=workId?works.filter(w=>w.id===workId):works.filter(w=>saved.has(w.id));
+    open('inquiry',`<p class="modal-eyebrow">${tr('INFORMAZIONI','ENQUIRIES')}</p><h2 id="dialog-title">${tr('Scrivi alla galleria.','Write to the gallery.')}</h2>${context?`<p>${esc(context)}</p>`:''}${list.length?`<div class="contact-summary"><strong>${tr('Le opere che ti interessano','The works you’re interested in')}</strong>${savedSummary(list)}</div>`:''}<form id="contact-form"><div class="form-grid"><label class="field">${tr('Il tuo nome','Your name')}<input name="name" autocomplete="name" required maxlength="100"></label><label class="field">${tr('Preferisco essere contattato via','Preferred contact channel')}<select name="channel"><option value="Email">Email</option><option value="WhatsApp">WhatsApp</option><option value="Phone">${tr('Telefono','Phone')}</option></select></label></div><label class="field reply-field">${replyField('Email')}</label><label class="field">${tr('Il tuo messaggio','Your message')}<textarea name="message" maxlength="2000"></textarea></label><input type="hidden" name="selection" value="${esc(list.map(w=>title(w)+' — '+artistOf(w)?.name).join(', '))}"><button class="button" type="submit">${tr('Prepara la richiesta','Prepare your enquiry')}${icon('arrow')}</button><p class="demo-note">${tr('Potrai controllare la richiesta prima di inviarla via email o WhatsApp. I dati del modulo non vengono salvati sul sito.','You can review your enquiry before sending it by email or WhatsApp. Form data is not saved on the website.')}</p></form>`);
   }
+  const localDay = () => {const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;};
+  function validSlots(date) {
+    const now=new Date();
+    return [...new Set(Array.isArray(config.visitSlots?.[date])?config.visitSlots[date]:[])].filter(time=>/^([01]\d|2[0-3]):[0-5]\d$/.test(time)&&new Date(date+'T'+time+':00')>now).sort();
+  }
+  function slotMarkup(date) { const slots=validSlots(date);return slots.length?`<fieldset class="slot-picker"><legend>${tr('Orari disponibili','Available times')}</legend><div class="slot-options">${slots.map((time,i)=>`<label><input type="radio" name="slot" value="${time}" ${i===0?'checked':''} required><span>${time}</span></label>`).join('')}</div></fieldset>`:`<p>${tr('Non ci sono orari disponibili per questo giorno.','There are no available times for this date.')}</p>`; }
   function appointment() {
-    const today = new Date(), localToday = new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    const address = String(config.address || '').trim();
-    const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : '';
-    const location = address ? `<a class="appointment-location" href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">${icon('location')}<span><strong>La visita si svolge qui</strong><br>${esc(address)}</span>${icon('external-arrow')}</a>` : `<div class="appointment-location is-unavailable">${icon('location')}<span><strong>Sede della collezione</strong><br>Indirizzo in aggiornamento</span></div>`;
-    open('appointment', `<p class="modal-eyebrow">INFORMAZIONI E APPUNTAMENTI</p><h2 id="dialog-title">Prenota una visita.</h2><p>Seleziona un giorno e un orario pubblicato. La galleria ti confermerà l’appuntamento via email o WhatsApp.</p>${location}<form id="appointment-form"><label class="field">Giorno della visita<input name="date" type="date" min="${localToday}" value="${localToday}" required></label><div id="appointment-slots">${appointmentSlots(localToday)}</div><div class="form-grid"><label class="field">Il tuo nome<input name="name" autocomplete="given-name" required maxlength="100"></label><label class="field">Conferma tramite<select name="channel"><option value="Email">Email</option><option value="WhatsApp">WhatsApp</option></select></label></div><label class="field" id="appointment-reply-field">La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it"></label><button class="button" type="submit" ${appointmentSlots(localToday).includes('slot-picker')?'':'disabled'}>Invia richiesta di visita ${icon('arrow')}</button><p class="demo-note">La richiesta non blocca lo slot: l’appuntamento è confermato solo dopo la risposta della galleria. Gli orari mostrati sono quelli inseriti in config.js.</p></form>`);
-    $('#appointment-form [name="date"]').addEventListener('change',e=>{ $('#appointment-slots').innerHTML=appointmentSlots(e.target.value); $('#appointment-form button[type="submit"]').disabled=!$('#appointment-slots .slot-picker'); });
+    const dates=Object.keys(config.visitSlots||{}).filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&date>=localDay()&&validSlots(date).length).sort();
+    open('appointment',`<p class="modal-eyebrow">${tr('INFORMAZIONI E APPUNTAMENTI','INFORMATION AND APPOINTMENTS')}</p><h2 id="dialog-title">${tr('Una visita in galleria.','A visit to the gallery.')}</h2><p>${tr('Scegli tra i giorni e gli orari pubblicati. La visita sarà confermata dalla galleria via email o WhatsApp.','Choose from the published dates and times. Your visit will be confirmed by the gallery by email or WhatsApp.')}</p><div class="appointment-location">${icon('location')}<span>${esc(config.address||tr('Sede della collezione · indirizzo in aggiornamento','Collection location · address to be announced'))}</span></div>${dates.length?`<form id="appointment-form"><label class="field">${tr('Giorno della visita','Visit date')}<select name="date">${dates.map(date=>`<option value="${date}">${formatDate(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('')}</select></label><div id="appointment-slots">${slotMarkup(dates[0])}</div><div class="form-grid"><label class="field">${tr('Il tuo nome','Your name')}<input name="name" autocomplete="name" required maxlength="100"></label><label class="field">${tr('Conferma tramite','Confirm via')}<select name="channel"><option value="Email">Email</option><option value="WhatsApp">WhatsApp</option></select></label></div><label class="field reply-field">${replyField('Email')}</label><button class="button" type="submit">${tr('Prepara la richiesta di visita','Prepare your visit request')}${icon('arrow')}</button><p class="demo-note">${tr('La richiesta non blocca lo slot. Attendi la conferma della galleria.','A request does not reserve the time slot. Please wait for confirmation from the gallery.')}</p></form>`:`<div class="slots-empty"><p>${tr('Il calendario delle visite è in aggiornamento. Contattaci per concordare un giorno e un orario.','The visit calendar is being updated. Contact us to arrange a date and time.')}</p><button class="button" data-visit-inquiry>${tr('Chiedi una visita','Enquire about a visit')}${icon('arrow')}</button></div>`}`);
   }
-  function prepareAppointment(form) {
-    const data = new FormData(form), date = String(data.get('date') || ''), slot = String(data.get('slot') || '');
-    if (!Array.isArray(config.visitSlots?.[date]) || !config.visitSlots[date].includes(slot)) { notify('Questo orario non è più disponibile'); appointment(); return; }
-    requestText = `Richiesta di visita — ${config.name}\n\nNome: ${data.get('name')}\nGiorno richiesto: ${date}\nOrario richiesto: ${slot}\nConferma tramite: ${data.get('channel')}\nRecapito: ${data.get('reply')}\n\nLa visita non è confermata finché la galleria non risponde.`;
-    const whatsappNumber=String(config.whatsapp || '').replace(/[^0-9]/g,'');
-    const whatsappUrl=data.get('channel')==='WhatsApp'&&/^[1-9][0-9]{7,14}$/.test(whatsappNumber)?`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(requestText)}`:null;
-    const emailUrl=data.get('channel')==='Email'&&config.email?`mailto:${encodeURIComponent(config.email)}?subject=${encodeURIComponent('Richiesta di visita — '+config.name)}&body=${encodeURIComponent(requestText)}`:null;
-    open('appointment-request',`<p class="modal-eyebrow">RICHIESTA DI VISITA</p><h2 id="dialog-title">Controlla i dettagli.</h2><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsappUrl?`<a class="button" href="${esc(whatsappUrl)}" target="_blank" rel="noopener noreferrer">Invia con WhatsApp ${icon('external-arrow')}</a>`:''}${emailUrl?`<a class="button" href="${esc(emailUrl)}">Invia con email ${icon('arrow')}</a>`:''}<button class="button ${whatsappUrl||emailUrl?'secondary':''}" data-action="copy-request">Copia la richiesta</button><button class="button secondary" data-action="download-request">Scarica il riepilogo</button></div><p class="demo-note">La galleria deve confermare l’orario. Nessun messaggio parte senza la tua azione.</p>`);
+  function showRequest(channel, subject) {
+    const number=String(config.whatsapp||'').replace(/[^0-9]/g,'');
+    const whatsapp=/^[1-9][0-9]{7,14}$/.test(number)?`https://wa.me/${number}?text=${encodeURIComponent(requestText)}`:null;
+    const email=config.email?`mailto:${config.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(requestText)}`:null;
+    open('request',`<p class="modal-eyebrow">${tr('RIEPILOGO DELLA RICHIESTA','ENQUIRY SUMMARY')}</p><h2 id="dialog-title">${tr('Controlla i dettagli.','Review the details.')}</h2><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsapp?`<a class="button" href="${esc(whatsapp)}" target="_blank" rel="noopener noreferrer">${tr('Invia con WhatsApp','Send with WhatsApp')}${icon('external-arrow')}</a>`:''}${email?`<a class="button" href="${esc(email)}">${tr('Invia con email','Send by email')}${icon('arrow')}</a>`:''}<button class="button ${whatsapp||email?'secondary':''}" data-action="copy-request">${tr('Copia la richiesta','Copy enquiry')}</button><button class="button secondary" data-action="download-request">${tr('Scarica il riepilogo','Download summary')}</button></div><p class="demo-note">${whatsapp||email?tr('Il messaggio sarà inviato solo dalla tua app, con una tua azione.','The message will only be sent from your app, with your action.'):tr('Questo è un fac simile: i recapiti sono da configurare. Puoi copiare o scaricare la richiesta; nessun messaggio è stato inviato.','This is a demo: contact details have not been configured. You can copy or download your enquiry; no message has been sent.')}</p>`);
   }
-  function prepareRequest(form) {
-    const data = new FormData(form);
-    requestText = `Richiesta di informazioni — ${config.name}\n\nNome: ${data.get('name')}\nContatto preferito: ${data.get('channel')}\nRecapito: ${data.get('reply')}\n${data.get('selection') ? `\nOpere: ${data.get('selection')}\n` : ''}${preferences ? `\nPreferenze: ${preferences.styles.join(', ')}\nBudget indicativo: ${preferences.budget}\nOccasione: ${preferences.intent}\n` : ''}\nMessaggio: ${data.get('message') || 'Vorrei ricevere maggiori informazioni.'}`;
-    const whatsappNumber = String(config.whatsapp || '').replace(/[^0-9]/g,'');
-    const whatsappUrl = data.get('channel') === 'WhatsApp' && /^[1-9][0-9]{7,14}$/.test(whatsappNumber) ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(requestText)}` : null;
-    open('request', `<p class="modal-eyebrow">RIEPILOGO DELLA RICHIESTA</p><h2 id="dialog-title">Riepilogo della richiesta.</h2><p>Controlla i dettagli prima di condividerli.</p><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsappUrl ? `<a class="button" href="${esc(whatsappUrl)}" target="_blank" rel="noopener noreferrer">Apri WhatsApp ${icon('external-arrow')}</a>` : ''}${config.email ? `<a class="button" href="mailto:${encodeURIComponent(config.email)}?subject=${encodeURIComponent('Informazioni sulle opere — ' + config.name)}&body=${encodeURIComponent(requestText)}">Apri la tua email ${icon('arrow')}</a>` : ''}<button class="button ${config.email ? 'secondary' : ''}" data-action="copy-request">Copia la richiesta</button><button class="button secondary" data-action="download-request">Scarica il riepilogo</button></div><p class="demo-note">${whatsappUrl ? 'WhatsApp aprirà il messaggio precompilato. L’invio avviene soltanto con una tua conferma nell’app.' : config.email ? 'L’invio avviene soltanto dal tuo programma di posta.' : 'Richiesta di esempio: non è stata inviata alla galleria. I recapiti reali devono essere configurati per attivare il contatto.'}</p>`);
+  function prepareRequest(form, visit=false) {
+    const data=new FormData(form),channel=String(data.get('channel'));
+    if(visit&&!validSlots(String(data.get('date'))).includes(String(data.get('slot')))){notify(tr('Questo orario non è più disponibile.','This time is no longer available.'));appointment();return;}
+    const subject=visit?tr('Richiesta di visita — Forma','Visit request — Forma'):tr('Richiesta di informazioni — Forma','Enquiry — Forma');
+    requestText=`${subject}\n\n${tr('Nome','Name')}: ${data.get('name')}\n${tr('Canale','Channel')}: ${channel}\n${tr('Recapito','Contact')}: ${data.get('reply')}\n`;
+    if(visit)requestText+=`\n${tr('Giorno richiesto','Requested date')}: ${formatDate(String(data.get('date')))}\n${tr('Orario','Time')}: ${data.get('slot')}\n\n${tr('La visita è da confermare dalla galleria.','The visit must be confirmed by the gallery.')}`;
+    else requestText+=`${inquiryContext?'\n'+inquiryContext+'\n':''}${data.get('selection')?'\n'+tr('Opere','Artworks')+': '+data.get('selection')+'\n':''}\n${tr('Messaggio','Message')}: ${data.get('message')||tr('Vorrei ricevere maggiori informazioni.','I would like more information.')}`;
+    showRequest(channel,subject);
   }
-  function privacy() { open('privacy', `<p class="modal-eyebrow">PRIVACY DEL PROTOTIPO</p><h2 id="dialog-title">Privacy e dati.</h2><p>Questa demo conserva solo gli identificativi delle opere preferite, le preferenze selezionate e la dimensione del testo nella memoria locale del tuo browser. Non richiede un account e non usa strumenti di analisi o tracciamento aggiunti dal sito.</p><p>I dati che inserisci nel modulo restano nella pagina: non vengono inviati a un server né memorizzati nella memoria locale. Copia e download sono attivati solo da una tua azione. Il servizio di hosting può trattare dati tecnici per erogare il sito.</p><p>Le immagini e i dati delle opere sono dimostrativi. Prima di usare il sito per una galleria reale, occorre inserire contenuti, recapiti e informativa privacy appropriati.</p><button class="button secondary" data-action="clear-data">Cancella preferite e preferenze</button>`); }
-  document.addEventListener('click', async e => {
-    const target = e.target.closest('button,a'); if (!target) return;
-    if (target.dataset.view) return viewerAction(target.dataset.view);
-    if(target.dataset.showcase) { if(target.dataset.showcase==='toggle'){showcasePlaying=!showcasePlaying;updateShowcasePlayback();}return; }
-    if (target.dataset.save) { toggleSaved(target.dataset.save); if(dialog.dataset.view === 'detail') { const w = works.find(w=>w.id===target.dataset.save); if(w) target.innerHTML = `${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}`; } return; }
-    if (target.dataset.detail) return detail(target.dataset.detail);
-    if (target.dataset.inquire) return contactForm(target.dataset.inquire);
-    if (target.dataset.filter) { filter = target.dataset.filter; visibleLimit = works.length; $$('.filter').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); }); renderWorks(); return; }
-    if (target.dataset.choice) {
-      const key = target.dataset.key, value = target.dataset.choice;
-      if (key === 'styles') { if (value === 'Mi lascio consigliare') draft.styles = draft.styles.includes(value) ? [] : [value]; else { draft.styles = draft.styles.filter(s => s !== 'Mi lascio consigliare'); draft.styles = draft.styles.includes(value) ? draft.styles.filter(s => s !== value) : [...draft.styles, value]; } }
-      else draft[key] = value;
-      $$('.choice', dialog).forEach(b => b.setAttribute('aria-pressed', key === 'styles' ? draft.styles.includes(b.dataset.choice) : draft[key] === b.dataset.choice));
-      $('[data-action="quiz-next"]', dialog).disabled = !(key === 'styles' ? draft.styles.length : draft[key]); return;
-    }
-    switch(target.dataset.action) {
-      case 'more-works': visibleLimit = works.length; renderWorks(); break;
-      case 'saved': renderSaved(); break;
-      case 'contact': contact(); break;
-      case 'appointment': appointment(); break;
-      case 'inquiry': contactForm(); break;
-      case 'quiz': startQuiz(); break;
-      case 'browse': dialog.close(); $('#opere').scrollIntoView({behavior:'smooth'}); break;
-      case 'quiz-back': if (quizStep) { quizStep--; renderQuiz(); } else dialog.close(); break;
-      case 'quiz-next': if (quizStep < 2) { quizStep++; renderQuiz(); $('#dialog-title').setAttribute('tabindex','-1'); $('#dialog-title').focus(); } else finishQuiz(); break;
-      case 'privacy': privacy(); break;
-      case 'clear-data': saved.clear(); preferences = null; ['forma-saved','forma-preferences'].forEach(k => {try {localStorage.removeItem(k);} catch{}}); updateCounts(); renderWorks(); notify('Preferite e preferenze cancellate'); break;
-      case 'copy-request': try { await navigator.clipboard.writeText(requestText); notify('Richiesta copiata: puoi incollarla nel tuo messaggio'); } catch { const range=document.createRange();range.selectNodeContents($('.request-preview',dialog));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);notify('Seleziona Copia dal menu del dispositivo per copiare il testo'); } break;
-      case 'download-request': { const url = URL.createObjectURL(new Blob([requestText],{type:'text/plain;charset=utf-8'})); const a = document.createElement('a'); a.href=url;a.download='richiesta-forma.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); break; }
+  function privacy() {
+    open('privacy',`<p class="modal-eyebrow">${tr('PRIVACY DEL PROTOTIPO','PROTOTYPE PRIVACY')}</p><h2 id="dialog-title">${tr('Privacy e dati.','Privacy and data.')}</h2><p>${tr('Questa demo conserva sul tuo dispositivo gli identificativi delle opere salvate, la lingua e la dimensione del testo. Non richiede un account e non aggiunge strumenti di analisi o tracciamento.','This demo stores saved artwork identifiers, language and text size on your device. It does not require an account or add analytics or tracking tools.')}</p><p>${tr('I dati dei moduli restano nel browser per preparare la richiesta e non vengono salvati sul sito. Le richieste vengono inviate solo tramite le tue applicazioni, dopo una tua azione. Il servizio di hosting può trattare dati tecnici per erogare il sito.','Form data remains in your browser to prepare the enquiry and is not saved on the website. Enquiries are only sent through your applications after your action. The hosting provider may process technical data to serve the website.')}</p><p>${tr('Opere, artisti ed eventi sono dimostrativi. Per una galleria reale occorre inserire contenuti, recapiti e informativa appropriati.','Artworks, artists and events are demonstrations. A real gallery requires its own content, contact details and privacy information.')}</p><button class="button secondary" data-action="clear-data">${tr('Cancella le opere salvate','Clear saved artworks')}</button>`);
+  }
+  function setTextSize(large) {document.body.classList.toggle('large-text',large);const b=$('#text-size');if(b){b.setAttribute('aria-pressed',large);b.setAttribute('aria-label',large?tr('Ripristina dimensione dei testi','Reset text size'):tr('Ingrandisci i testi','Enlarge text'));}}
+  document.addEventListener('click',async e=>{
+    const target=e.target.closest('button,a');if(!target)return;
+    if(target.dataset.lang){if(target.dataset.lang!==language){language=target.dataset.lang;persist('forma-language',language);renderShell();renderHome();route();}return;}
+    if(target.id==='text-size'){const large=!document.body.classList.contains('large-text');persist('forma-large-text',large);setTextSize(large);return;}
+    if(target.dataset.expand){const category=target.dataset.expand;limits[category]=Math.min(10,limits[category]+2);renderCategory(category);const next=$(`[data-expand="${category}"]`);(next.hidden?$(`[data-collapse="${category}"]`):next).focus({preventScroll:true});return;}
+    if(target.dataset.collapse){limits[target.dataset.collapse]=2;renderCategory(target.dataset.collapse);$(`#collezione-${target.dataset.collapse.toLowerCase()}`).scrollIntoView({behavior:reducedMotion.matches?'instant':'smooth'});$(`[data-expand="${target.dataset.collapse}"]`).focus({preventScroll:true});return;}
+    if(target.dataset.eventScroll){const track=$('.event-track');track.scrollBy({left:Number(target.dataset.eventScroll)*(track.querySelector('.event-card').getBoundingClientRect().width+28),behavior:reducedMotion.matches?'instant':'smooth'});return;}
+    if(target.dataset.event)return showEvent(target.dataset.event);
+    if(target.dataset.eventInquiry){const event=events.find(event=>event.id===target.dataset.eventInquiry);return contactForm(null,tr('Evento: ','Event: ')+local(event.title)+' · '+eventDate(event));}
+    if(target.hasAttribute('data-visit-inquiry'))return contactForm(null,tr('Vorrei concordare una visita alla collezione.','I would like to arrange a visit to the collection.'));
+    if(target.dataset.view)return viewerAction(target.dataset.view);
+    if(target.dataset.save)return toggleSaved(target.dataset.save);
+    if(target.dataset.collageSlot!==undefined){const slot=collageSlots[Number(target.dataset.collageSlot)];const visible=collagePending?.slot===slot&&collageAnimation.currentTime>collageDuration/2?collagePending.next:slot.work;return detail(visible.id);}
+    if(target.dataset.detail)return detail(target.dataset.detail);
+    if(target.dataset.inquire)return contactForm(target.dataset.inquire);
+    switch(target.dataset.action){
+      case 'toggle-collage':collagePlaying=!collagePlaying;updatePlayback();break;
+      case 'saved':renderSaved();break;
+      case 'contact':contact();break;
+      case 'appointment':appointment();break;
+      case 'inquiry':contactForm();break;
+      case 'browse':dialog.close();location.hash='opere';if(location.hash==='#opere')route();break;
+      case 'privacy':privacy();break;
+      case 'clear-data':saved.clear();persist('forma-saved',[]);updateSaved();notify(tr('Selezione cancellata','Selection cleared'));break;
+      case 'copy-request':try{await navigator.clipboard.writeText(requestText);notify(tr('Richiesta copiata','Enquiry copied'));}catch{const range=document.createRange();range.selectNodeContents($('.request-preview'));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);notify(tr('Usa Copia dal menu del dispositivo.','Use Copy from your device menu.'));}break;
+      case 'download-request':{const url=URL.createObjectURL(new Blob([requestText],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=language==='en'?'forma-enquiry.txt':'richiesta-forma.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);break;}
     }
   });
-  document.addEventListener('change', e => { if(e.target.matches('[name="channel"]')) { const channel=e.target.value; const appointmentMode=!!e.target.closest('#appointment-form'); const label=appointmentMode?$('#appointment-reply-field'):$('#reply-field'); if(!label)return; label.innerHTML=channel === 'WhatsApp' ? 'Il tuo numero WhatsApp<input name="reply" type="tel" inputmode="tel" autocomplete="tel" required maxlength="30" placeholder="Numero con prefisso internazionale">' : channel === 'Telefono' ? 'Il tuo telefono<input name="reply" type="tel" autocomplete="tel" required maxlength="30" placeholder="Il numero a cui richiamarti">' : channel === 'Facebook' ? 'Il tuo nome o profilo Facebook<input name="reply" required maxlength="200" placeholder="Nome o link del tuo profilo">' : 'La tua email<input name="reply" type="email" autocomplete="email" required maxlength="150" placeholder="nome@esempio.it">'; } });
-  document.addEventListener('submit', e => { if(e.target.id === 'contact-form') { e.preventDefault(); prepareRequest(e.target); } if(e.target.id === 'appointment-form') { e.preventDefault(); prepareAppointment(e.target); } });
-  $('.close',dialog).addEventListener('click',()=>dialog.close());
+  document.addEventListener('change',e=>{if(e.target.matches('[name="channel"]'))$('.reply-field',e.target.closest('form')).innerHTML=replyField(e.target.value);if(e.target.matches('#appointment-form [name="date"]'))$('#appointment-slots').innerHTML=slotMarkup(e.target.value);});
+  document.addEventListener('submit',e=>{if(e.target.id==='contact-form'||e.target.id==='appointment-form'){e.preventDefault();prepareRequest(e.target,e.target.id==='appointment-form');}});
+  $('.close').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('close',()=>{dialogBody.innerHTML='';updatePlayback();});
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
-  const textButton=$('#text-size');
-  function setTextSize(large) { document.body.classList.toggle('large-text',large);textButton.setAttribute('aria-pressed',large);textButton.setAttribute('aria-label',large?'Ripristina dimensione dei testi':'Ingrandisci i testi'); }
-  setTextSize(read('forma-large-text') === true);
-  textButton.addEventListener('click',()=>{const large=!document.body.classList.contains('large-text');setTextSize(large);persist('forma-large-text',large);notify(large?'Testi ingranditi':'Dimensione dei testi ripristinata');});
-  if(/^#[0-9a-f]{6}$/i.test(config.accent))document.documentElement.style.setProperty('--ink',config.accent);
   document.addEventListener('keydown',e=>{if(dialog.open&&dialog.dataset.view==='detail'&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){if(e.key==='ArrowRight'){e.preventDefault();viewerAction('next');}if(e.key==='ArrowLeft'){e.preventDefault();viewerAction('previous');}}});
-  $('.sup').textContent=`01—${String(works.length).padStart(2,'0')}`;
-  $('#collection-summary').textContent=`${works.length} opere, 3 categorie.`;
-  $('#year').textContent = new Date().getFullYear(); updateCounts(); renderWorks(); startShowcase();
+  renderShell();renderHome();route();
 })();
