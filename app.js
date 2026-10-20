@@ -37,8 +37,8 @@
   if(!showcaseScenes.length) showcaseScenes.push([]);
   const sceneCount = Math.max(showcaseScenes.length, portraitWorks.length);
   const cycleIndex = (index, length) => ((index % length) + length) % length;
-  const showcaseInterval = Math.max(6000, Number(config.showcaseInterval) || 9000);
-  let showcaseIndex = 0, showcaseTimer = null, showcaseChanging = false;
+  let showcaseIndex = 0, portraitIndex = 0, showcaseTimer = null, showcaseChanging = false;
+  let nextShowcaseSide = 'right', nextShowcaseDelay = 5000;
   let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
   function canShowcaseAdvance() {
     return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement) && sceneCount>1;
@@ -46,36 +46,43 @@
   function scheduleShowcase() {
     clearTimeout(showcaseTimer);
     showcaseTimer = null;
-    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),showcaseInterval);
+    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),nextShowcaseDelay);
   }
   function showcaseWork(w, slot, portrait=false) {
     const n = works.indexOf(w);
     const offsets = [[-12,0],[0,14],[12,0],[0,-12],[-8,8],[8,-8]];
     const [x,y] = offsets[n % offsets.length];
     const motion = `--entry-x:${x}px;--entry-y:${y}px;--entry-scale:${n%3===0?0.985:1};--entry-duration:${700+n*11}ms;--entry-delay:${slot*90+(n*7)%90}ms`;
-    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">↗</span></span></button></figure>`;
+    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><span class="showcase-open-mark" aria-hidden="true">${icon('external-arrow')}</span></span></button></figure>`;
   }
-  function renderShowcase(manual=false) {
+  function renderShowcase(manual=false, changedSide=null) {
     const current = showcaseScenes[cycleIndex(showcaseIndex, showcaseScenes.length)];
-    const portrait = portraitWorks.length ? portraitWorks[cycleIndex(showcaseIndex, portraitWorks.length)] : null;
-    $('#showcase-pair').innerHTML = current.map((w,i)=>showcaseWork(w,i)).join('');
-    $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,1,true) : '';
+    const portrait = portraitWorks.length ? portraitWorks[cycleIndex(portraitIndex, portraitWorks.length)] : null;
+    if(changedSide!=='right') $('#showcase-pair').innerHTML = current.map((w,i)=>showcaseWork(w,i)).join('');
+    if(changedSide!=='left') $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,1,true) : '';
     showcaseGrid.classList.toggle('without-portrait',!portrait);
     showcaseGrid.classList.toggle('without-main',!current.length);
     const position = cycleIndex(showcaseIndex, sceneCount) + 1;
     $('#showcase-count').textContent = `${String(position).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
     $('#showcase-count').setAttribute('aria-label',`Esposizione ${position} di ${sceneCount}`);
-    if(manual) $('#showcase-announcement').textContent = [...current,portrait].filter(Boolean).map(w=>w.title).join(', ');
-    showcaseGrid.classList.remove('is-changing');
+    if(manual) $('#showcase-announcement').textContent = (changedSide==='right' ? portrait : current[0])?.title || '';
+    showcaseGrid.classList.remove('is-changing-left','is-changing-right');
     showcaseChanging = false;
     scheduleShowcase();
   }
   function moveShowcase(direction,automatic=false) {
     if(showcaseChanging || (automatic && !canShowcaseAdvance())) return;
+    const side = nextShowcaseSide;
     clearTimeout(showcaseTimer);
     showcaseChanging = true;
-    showcaseGrid.classList.add('is-changing');
-    setTimeout(()=>{showcaseIndex+=direction;renderShowcase(!automatic);},reducedMotion.matches?0:180);
+    showcaseGrid.classList.add(side==='right'?'is-changing-right':'is-changing-left');
+    setTimeout(()=>{
+      if(side==='right') portraitIndex+=direction;
+      else showcaseIndex+=direction;
+      nextShowcaseSide = side==='right'?'left':'right';
+      nextShowcaseDelay = 3000;
+      renderShowcase(!automatic,side);
+    },reducedMotion.matches?0:180);
   }
   function updateShowcasePlayback() {
     $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
@@ -124,7 +131,7 @@
   }
   function renderViewer() {
     const w = works[viewState.index];
-    open('detail', `<div class="viewer-top"><strong>FORMA</strong><span>Sala di osservazione / ${String(viewState.index+1).padStart(2,'0')}</span></div><div class="viewer-layout"><div class="viewer-image-area ${viewState.dark ? 'dark' : ''}"><div class="viewer-viewport" aria-label="Opera ingrandibile: usa i comandi sottostanti"><div class="viewer-canvas">${image(w,'meet')}</div></div><div class="viewer-controls"><div class="zoom-control"><button data-view="zoom-out" aria-label="Riduci ingrandimento" disabled>−</button><output id="zoom-output" aria-live="polite">100%</output><button data-view="zoom-in" aria-label="Ingrandisci opera">+</button></div><button data-view="reset">Ripristina</button><button data-view="background" aria-pressed="${viewState.dark}">Fondo ${viewState.dark ? 'chiaro' : 'scuro'}</button></div></div><div class="viewer-info"><p class="viewer-kicker modal-eyebrow">${String(viewState.index+1).padStart(2,'0')} / ${esc(w.category)}</p><h2 id="dialog-title">${esc(w.title)}</h2><p>${esc(w.medium)}<br>${esc(w.size)}</p><p class="viewer-description">${esc(w.description)}</p><p class="viewer-hint">Ingrandisci con +. Poi trascina l’immagine per esplorare i dettagli.</p><div class="modal-actions"><button class="button" data-inquire="${esc(w.id)}">Informazioni sull’opera <span aria-hidden="true">↗</span></button><button class="button secondary" data-save="${esc(w.id)}" aria-pressed="${saved.has(w.id)}">${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}</button></div><div class="viewer-nav"><button data-view="previous" aria-label="Opera precedente">←</button><span>${viewState.index+1} / ${works.length}</span><button data-view="next" aria-label="Opera successiva">→</button></div><p class="demo-note">Opera dimostrativa generata con IA.</p></div></div>`);
+    open('detail', `<div class="viewer-top"><strong>FORMA</strong><span>Sala di osservazione / ${String(viewState.index+1).padStart(2,'0')}</span></div><div class="viewer-layout"><div class="viewer-image-area ${viewState.dark ? 'dark' : ''}"><div class="viewer-viewport" aria-label="Opera ingrandibile: usa i comandi sottostanti"><div class="viewer-canvas">${image(w,'meet')}</div></div><div class="viewer-controls"><div class="zoom-control"><button data-view="zoom-out" aria-label="Riduci ingrandimento" disabled>−</button><output id="zoom-output" aria-live="polite">100%</output><button data-view="zoom-in" aria-label="Ingrandisci opera">+</button></div><button data-view="reset">Ripristina</button><button data-view="background" aria-pressed="${viewState.dark}">Fondo ${viewState.dark ? 'chiaro' : 'scuro'}</button></div></div><div class="viewer-info"><p class="viewer-kicker modal-eyebrow">${String(viewState.index+1).padStart(2,'0')} / ${esc(w.category)}</p><h2 id="dialog-title">${esc(w.title)}</h2><p>${esc(w.medium)}<br>${esc(w.size)}</p><p class="viewer-description">${esc(w.description)}</p><p class="viewer-hint">Ingrandisci con +. Poi trascina l’immagine per esplorare i dettagli.</p><div class="modal-actions"><button class="button" data-inquire="${esc(w.id)}">Informazioni sull’opera ${icon('external-arrow')}</button><button class="button secondary" data-save="${esc(w.id)}" aria-pressed="${saved.has(w.id)}">${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}</button></div><div class="viewer-nav"><button data-view="previous" aria-label="Opera precedente">←</button><span>${viewState.index+1} / ${works.length}</span><button data-view="next" aria-label="Opera successiva">→</button></div><p class="demo-note">Opera dimostrativa generata con IA.</p></div></div>`);
     setupPan();
   }
   function updateZoom() {
@@ -184,7 +191,7 @@
     requestText = `Richiesta di informazioni — ${config.name}\n\nNome: ${data.get('name')}\nContatto preferito: ${data.get('channel')}\nRecapito: ${data.get('reply')}\n${data.get('selection') ? `\nOpere: ${data.get('selection')}\n` : ''}${preferences ? `\nPreferenze: ${preferences.styles.join(', ')}\nBudget indicativo: ${preferences.budget}\nOccasione: ${preferences.intent}\n` : ''}\nMessaggio: ${data.get('message') || 'Vorrei ricevere maggiori informazioni.'}`;
     const whatsappNumber = String(config.whatsapp || '').replace(/[^0-9]/g,'');
     const whatsappUrl = data.get('channel') === 'WhatsApp' && /^[1-9][0-9]{7,14}$/.test(whatsappNumber) ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(requestText)}` : null;
-    open('request', `<p class="modal-eyebrow">RIEPILOGO DELLA RICHIESTA</p><h2 id="dialog-title">Riepilogo della richiesta.</h2><p>Controlla i dettagli prima di condividerli.</p><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsappUrl ? `<a class="button" href="${esc(whatsappUrl)}" target="_blank" rel="noopener noreferrer">Apri WhatsApp ↗</a>` : ''}${config.email ? `<a class="button" href="mailto:${encodeURIComponent(config.email)}?subject=${encodeURIComponent('Informazioni sulle opere — ' + config.name)}&body=${encodeURIComponent(requestText)}">Apri la tua email ${icon('arrow')}</a>` : ''}<button class="button ${config.email ? 'secondary' : ''}" data-action="copy-request">Copia la richiesta</button><button class="button secondary" data-action="download-request">Scarica il riepilogo</button></div><p class="demo-note">${whatsappUrl ? 'WhatsApp aprirà il messaggio precompilato. L’invio avviene soltanto con una tua conferma nell’app.' : config.email ? 'L’invio avviene soltanto dal tuo programma di posta.' : 'Richiesta di esempio: non è stata inviata alla galleria. I recapiti reali devono essere configurati per attivare il contatto.'}</p>`);
+    open('request', `<p class="modal-eyebrow">RIEPILOGO DELLA RICHIESTA</p><h2 id="dialog-title">Riepilogo della richiesta.</h2><p>Controlla i dettagli prima di condividerli.</p><pre class="request-preview">${esc(requestText)}</pre><div class="modal-actions">${whatsappUrl ? `<a class="button" href="${esc(whatsappUrl)}" target="_blank" rel="noopener noreferrer">Apri WhatsApp ${icon('external-arrow')}</a>` : ''}${config.email ? `<a class="button" href="mailto:${encodeURIComponent(config.email)}?subject=${encodeURIComponent('Informazioni sulle opere — ' + config.name)}&body=${encodeURIComponent(requestText)}">Apri la tua email ${icon('arrow')}</a>` : ''}<button class="button ${config.email ? 'secondary' : ''}" data-action="copy-request">Copia la richiesta</button><button class="button secondary" data-action="download-request">Scarica il riepilogo</button></div><p class="demo-note">${whatsappUrl ? 'WhatsApp aprirà il messaggio precompilato. L’invio avviene soltanto con una tua conferma nell’app.' : config.email ? 'L’invio avviene soltanto dal tuo programma di posta.' : 'Richiesta di esempio: non è stata inviata alla galleria. I recapiti reali devono essere configurati per attivare il contatto.'}</p>`);
   }
   function privacy() { open('privacy', `<p class="modal-eyebrow">PRIVACY DEL PROTOTIPO</p><h2 id="dialog-title">Privacy e dati.</h2><p>Questa demo conserva solo gli identificativi delle opere preferite, le preferenze selezionate e la dimensione del testo nella memoria locale del tuo browser. Non richiede un account e non usa strumenti di analisi o tracciamento aggiunti dal sito.</p><p>I dati che inserisci nel modulo restano nella pagina: non vengono inviati a un server né memorizzati nella memoria locale. Copia e download sono attivati solo da una tua azione. Il servizio di hosting può trattare dati tecnici per erogare il sito.</p><p>Le immagini e i dati delle opere sono dimostrativi. Prima di usare il sito per una galleria reale, occorre inserire contenuti, recapiti e informativa privacy appropriati.</p><button class="button secondary" data-action="clear-data">Cancella preferite e preferenze</button>`); }
   document.addEventListener('click', async e => {
