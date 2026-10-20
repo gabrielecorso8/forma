@@ -31,7 +31,7 @@ Il modulo NON invia messaggi e NON memorizza i dati di contatto. Senza recapiti 
 
 ## Personalizzazione
 
-Aprire `dist/config.js`:
+Aprire `config.js`:
 
 ```js
 window.FORMA_CONFIG = {
@@ -45,7 +45,7 @@ window.FORMA_CONFIG = {
 };
 ```
 
-Gli esempi di recapiti sopra non sono recapiti utilizzabili: inserire quelli verificati del cliente. Il campo `name` aggiorna i riepiloghi di contatto; per il marchio, i titoli della pagina e i testi editoriali modificare `dist/index.html`. `accent` aggiorna il colore principale; gli altri colori e le dimensioni si trovano nelle variabili e nelle regole di `dist/style.css`.
+Gli esempi di recapiti sopra non sono recapiti utilizzabili: inserire quelli verificati del cliente. Il campo `name` aggiorna i riepiloghi di contatto; per il marchio, i titoli della pagina e i testi editoriali modificare `index.html`. `accent` aggiorna il colore principale; gli altri colori e le dimensioni si trovano nelle variabili e nelle regole di `style.css`.
 
 Inserendo un’email compare «Apri la tua email». Il telefono abilita il collegamento per chiamare e il link Facebook apre la pagina o Messenger. Il campo `whatsapp` deve contenere il numero verificato della galleria in formato internazionale: se il visitatore seleziona WhatsApp, nel riepilogo compare «Apri WhatsApp» con il messaggio precompilato. Senza un numero configurato, la demo prepara soltanto il riepilogo copiabile. L’invio finale resta sempre un’azione del visitatore nella sua applicazione; nessun messaggio viene inviato automaticamente.
 
@@ -55,9 +55,9 @@ Per una messa online commerciale: sostituire il catalogo, inserire identità e r
 
 ## Aprire e trasferire il sito
 
-Il sito è HTML/CSS/JavaScript statico: nessuna installazione o compilazione. Aprire `dist/index.html` per una consultazione locale oppure servire la cartella `dist` su un hosting statico. Per clipboard e comportamento di archiviazione più uniforme, usare HTTP locale o HTTPS.
+Il sito è HTML/CSS/JavaScript statico: nessuna installazione o compilazione. Aprire `index.html` per una consultazione locale oppure servire la radice della repository su un hosting statico. Per clipboard e comportamento di archiviazione più uniforme, usare HTTP locale o HTTPS.
 
-La repository GitHub esclude la cartella `.openai`, che contiene i metadati interni della pubblicazione Sites. Per distribuire il sito è sufficiente la cartella `dist`. Non sono presenti chiavi API o credenziali applicative.
+La repository GitHub esclude la cartella `.openai`, che contiene i metadati interni della pubblicazione Sites. Per distribuire il sito è sufficiente la radice della repository. Non sono presenti chiavi API o credenziali applicative.
 
 ## Verifiche effettuate
 
@@ -78,7 +78,7 @@ Non è stata svolta una sessione di usabilità con persone del target, né una c
 
 ## Asset e licenze
 
-Asset attivi: `dist/assets/collection.jpg`, `astratto-v3.jpg`, `geometrico-v3.jpg` e `paesaggio-v3.jpg`. I tre nuovi atlanti sono stati creati con lo strumento integrato Imagegen; i prompt completi sono in `PROMPT-IMMAGINI.md`. Il footer contiene esattamente la dicitura richiesta: «Fac simile · Opere dimostrative generate con ImageGen 2.5». `gallery.jpg` e i vecchi font con relative licenze restano conservati ma non vengono caricati dalla pagina.
+Asset attivi: `assets/collection.jpg`, `astratto-v3.jpg`, `geometrico-v3.jpg` e `paesaggio-v3.jpg`. I tre nuovi atlanti sono stati creati con lo strumento integrato Imagegen; i prompt completi sono in `PROMPT-IMMAGINI.md`. Il footer contiene esattamente la dicitura richiesta: «Fac simile · Opere dimostrative generate con ImageGen 2.5». `gallery.jpg` e i vecchi font con relative licenze restano conservati ma non vengono caricati dalla pagina.
 
 Riferimenti esaminati: [Vistamare](https://vistamare.com/), [ZERO…](https://galleriazero.it/), [Cantadora](https://www.cantadora.it/) e [Radar](https://www.galleriaradar.it/). Il testo della pagina Radar non era disponibile nell’estrazione consultata. Il prototipo adotta una direzione originale, senza riprodurre contenuti o identità delle gallerie.
 

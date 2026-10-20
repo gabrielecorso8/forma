@@ -2,11 +2,11 @@
 
 Metodo: strumento integrato Imagegen. Le immagini PNG generate sono state convertite in JPEG per alleggerire il sito, senza modifiche visive o ritagli dei file. Il catalogo mostra i tre pannelli attraverso CSS.
 
-## dist/assets/gallery.jpg
+## assets/gallery.jpg
 
 Use case: photorealistic-natural. Asset type: wide website hero image, landscape 3:2. Photograph of a quiet, sophisticated Italian contemporary art gallery, creamy plaster wall and light limestone floor, one very large beautifully textured abstract oil painting on the wall, warm ivory, terracotta red and muted cobalt blue organic shapes, in a thin dark wood frame. An oak gallery bench in the lower foreground and warm natural side light. No people, no signage, no typography, no watermarks. Real architectural editorial photography, tactile, understated, premium, imperfect natural materials. Straight-on frontal view, entire painting visible, artwork takes up 65 percent of image. This is fictional original art, no identifiable artist.
 
-## dist/assets/collection.jpg
+## assets/collection.jpg
 
 Use case: stylized-concept. Asset type: website collection imagery atlas. A wide landscape image, exactly three equal-width panels edge-to-edge with no gaps, no border, no captions, no typography: left panel original abstract textured painting in deep ultramarine, warm cream, rust terracotta, large soft expressive forms; center panel abstract minimal geometric painting in olive green, soft sand, charcoal, chalk; right panel original loose fine-art landscape painting of Italian hills in ochre, pale sky and muted lavender. Every panel is a complete independent artwork filling its rectangle, viewed flat head-on, matte canvas texture with subtle pigment detail. Sophisticated contemporary fine art, restrained compositions. No frame, no room, no objects, no text. Very wide 3:2 or wider composition.
 
@@ -15,14 +15,14 @@ Use case: stylized-concept. Asset type: website collection imagery atlas. A wide
 
 Metodo: strumento integrato Imagegen. Tre atlanti originali di sei opere ciascuno; i file sono convertiti in JPEG senza alterare composizioni o colori. Le singole opere sono isolate dal codice SVG del sito.
 
-## dist/assets/astratto-v3.jpg
+## assets/astratto-v3.jpg
 
 Use case: stylized-concept. Asset type: an image atlas for a gallery website. Landscape 3:2 ratio. Exactly SIX independent square original paintings in a rigorous 3-column by 2-row grid. Each square fills exactly one sixth of the total image, edge to edge, no gutters, no borders, no frames, no labels, no numbers, no signatures, no text. Flat frontal digitized artworks with tactile pigment detail, sophisticated compositions. Important: exactly 3 equal-width columns and exactly 2 equal-height rows. Every cell is a separate fully composed artwork, not a continuation of its neighbors. All six artworks are non-geometric abstract paintings, varied expressive painterly gestures and rich but restrained color. Reading left to right then top to bottom: 1 deep oxide red with light cream scraped strokes, 2 airy pale blue and ivory translucent washes, 3 black gestural ink marks on raw warm canvas, 4 layers of ochre and earthy mineral textures, 5 deep midnight violet and indigo with a small pale glow, 6 terracotta orange and muted coral rhythmic broad brushstrokes. Actual painted surfaces, no objects or landscape subjects. Avoid repeating compositions. Every square must have a distinct arrangement.
 
-## dist/assets/geometrico-v3.jpg
+## assets/geometrico-v3.jpg
 
 Use case: stylized-concept. Asset type: an image atlas for a gallery website. Landscape 3:2 ratio. Exactly SIX independent square original paintings in a rigorous 3-column by 2-row grid. Each square fills exactly one sixth of the total image, edge to edge, no gutters, no borders, no frames, no labels, no numbers, no signatures, no text. Flat frontal digitized artworks with tactile pigment detail, sophisticated compositions. Important: exactly 3 equal-width columns and exactly 2 equal-height rows. Every cell is a separate fully composed artwork, not a continuation of its neighbors. All six artworks are refined geometric abstract paintings. Reading left to right then top to bottom: 1 two intersecting ultramarine arches on warm ivory; 2 a sparse asymmetrical grid of brick red and pale yellow blocks; 3 a single large incomplete charcoal circle and one small red square on chalk ground; 4 suspended overlapping sage and dark olive rectangles; 5 three offset navy horizontal bars separated by cream intervals; 6 tall narrow black and rust vertical bands on sandy ground. Matte handpainted textures, subtly imperfect pigment edges; no digital gradients, no 3D rendering. Precise composition with generous negative space. Every square must have a distinct arrangement.
 
-## dist/assets/paesaggio-v3.jpg
+## assets/paesaggio-v3.jpg
 
 Use case: stylized-concept. Asset type: an image atlas for a gallery website. Landscape 3:2 ratio. Exactly SIX independent square original paintings in a rigorous 3-column by 2-row grid. Each square fills exactly one sixth of the total image, edge to edge, no gutters, no borders, no frames, no labels, no numbers, no signatures, no text. Flat frontal digitized artworks with tactile pigment detail, sophisticated compositions. Important: exactly 3 equal-width columns and exactly 2 equal-height rows. Every cell is a separate fully composed artwork, not a continuation of its neighbors. All six artworks are representational painterly Italian landscapes, oil on canvas, hand-painted detail, not photography. Reading left to right then top to bottom: 1 misty lagoon in pale morning blue with distant lagoon buildings; 2 a winter path among bare trees, neutral grays and muted greens; 3 sunlit limestone coast above turquoise sea, off-white and cyan; 4 rolling vineyard rows with cypress trees, olive green and warm ochre; 5 a quiet country road after rain with puddles reflecting cloudy silver sky; 6 very low green valley horizon with expansive lavender dusk sky. Each square a complete landscape painting with its own horizon, no continuation across cells, no frames or text.
