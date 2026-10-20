@@ -6,6 +6,7 @@ window.FORMA_CONFIG = {
   "facebook": null,
   "whatsapp": null,
   "accent": "#20201e",
+  "showcaseInterval": 9000,
   "artworks": [
     {
       "id": "forma-01",

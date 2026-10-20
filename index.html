@@ -4,9 +4,9 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Forma. Ventuno opere da osservare, una selezione personale, un contatto diretto con la galleria.">
 <meta name="theme-color" content="#f4f3ef"><title>FORMA — Opere</title>
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=showcase-1">
 <link rel="preload" href="assets/collection.jpg" as="image">
-<script src="config.js" defer></script><script src="app.js" defer></script>
+<script src="config.js?v=showcase-1" defer></script><script src="app.js?v=showcase-1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto</a>
@@ -16,15 +16,12 @@
   <div class="header-actions"><button id="text-size" class="text-size" aria-pressed="false" aria-label="Ingrandisci i testi">A+</button><button class="saved-nav" data-action="saved">Selezione <span class="count">0</span></button><button class="contact-link" data-action="contact">Contatti <span aria-hidden="true">↗</span></button></div>
 </header>
 <main id="main">
-  <section class="exhibition" id="inizio" aria-labelledby="hero-title">
-    <div class="exhibition-rail">
-      <div class="rail-top"><p class="label">In evidenza / 01</p><p class="exhibition-heading">Studi<br> sul colore.</p></div>
-      <div class="exhibition-caption"><span id="hero-number" class="work-number">01 — 03</span><h1 id="hero-title">Dialogo in blu</h1><p id="hero-medium">Tecnica mista su tela<br>50 × 100 cm</p><button class="line-link" id="hero-open" data-detail="forma-01">Osserva l’opera <span aria-hidden="true">↗</span></button></div>
-      <div class="exhibition-index" role="group" aria-label="Scegli l’opera in primo piano"><button data-exhibit="0" aria-label="01, Dialogo in blu" aria-pressed="true">01</button><button data-exhibit="1" aria-label="02, Equilibrio naturale" aria-pressed="false">02</button><button data-exhibit="2" aria-label="03, Paesaggio interiore" aria-pressed="false">03</button></div>
-    </div>
-    <div class="exhibition-stage"><button class="exhibition-art" id="hero-art" data-detail="forma-01" aria-label="Apri Dialogo in blu nella vista immersiva"></button><span class="detail-caption">Opera intera</span><button class="expand-art" id="hero-expand" data-detail="forma-01">Osserva l’opera <span aria-hidden="true">↗</span></button></div>
+  <section class="showcase" id="inizio" aria-labelledby="hero-title" aria-roledescription="Vetrina animata">
+    <div class="showcase-heading"><div><p class="label">Collezione / Forma</p><h1 id="hero-title">Studi sul colore.</h1></div><div class="showcase-controls" role="group" aria-label="Controlli della vetrina"><button data-showcase="previous" aria-label="Opere precedenti">←</button><span id="showcase-count">01 / 09</span><button data-showcase="next" aria-label="Opere successive">→</button><button class="showcase-toggle" data-showcase="toggle"><span id="showcase-play-icon" aria-hidden="true">Ⅱ</span><span id="showcase-play-label">Pausa</span></button></div></div>
+    <div class="showcase-grid"><div class="showcase-main" aria-label="Opere quadrate e orizzontali"><div id="showcase-pair" class="showcase-pair"></div></div><aside class="showcase-portrait" aria-label="Opere verticali"><div id="showcase-portrait"></div></aside></div>
+    <div class="showcase-foot"><p>Seleziona un’opera per osservarla da vicino.</p><span id="collection-summary">21 opere, 3 categorie.</span><a href="#opere">Tutte le opere <span aria-hidden="true">↓</span></a></div>
+    <p class="sr-only" id="showcase-announcement" role="status" aria-live="polite"></p>
   </section>
-  <div class="exhibition-bottom"><span>FORMA / Progetto espositivo</span><a href="#opere">Indice delle opere <span aria-hidden="true">↓</span></a><span id="collection-summary">21 opere, 3 categorie.</span></div>
   <section class="collection container" id="opere" aria-labelledby="collection-title">
     <div class="section-top"><h2 id="collection-title">Le opere<span class="sup">01—21</span></h2><p>Apri un’opera per osservarla da vicino.<br>Salva quelle che vuoi ritrovare.</p></div>
     <div class="collection-toolbar"><div class="filters" role="group" aria-label="Filtra le opere per stile"><button class="filter active" data-filter="all" aria-pressed="true">Tutte</button><button class="filter" data-filter="Astratto" aria-pressed="false">Astratto</button><button class="filter" data-filter="Geometrico" aria-pressed="false">Geometrico</button><button class="filter" data-filter="Paesaggio" aria-pressed="false">Paesaggio</button></div><span id="results-count" aria-live="polite">3 opere</span></div>

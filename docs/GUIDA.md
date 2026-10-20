@@ -8,7 +8,7 @@ Un allestimento centrato sulle opere: sans serif Helvetica/Arial di sistema, fon
 
 La pagina iniziale mostra l’opera intera, senza ritaglio ingrandito. Le dimensioni iniziali sono limitate alla risoluzione nativa del pannello: non si allarga un dettaglio da 512 pixel sull’intera larghezza dello schermo. «Osserva l’opera» apre la sala a tutta pagina. + e − portano lo zoom volontario dal 100% al 300%; trascinamento e ripristino esplorano il dettaglio. Il fondo è commutabile e si può passare fra tutte le 21 opere, anche con le frecce della tastiera. Escape chiude la sala.
 
-Il catalogo comprende 21 opere: 7 Astratto, 7 Geometrico e 7 Paesaggio. Sono mostrate inizialmente 9 schede, poi 18 e 21 con il pulsante «Mostra altre opere». I filtri di categoria mostrano tutti e 7 i lavori corrispondenti. Il conteggio è sempre esplicito. La copertina mantiene tre opere in evidenza.
+Il catalogo comprende 21 opere: 7 Astratto, 7 Geometrico e 7 Paesaggio. Sono mostrate inizialmente 9 schede, poi 18 e 21 con il pulsante «Mostra altre opere». I filtri di categoria mostrano tutti e 7 i lavori corrispondenti. La testata mostra i diciotto quadrati a coppie nell’area principale e fa ruotare i tre verticali sulla destra, per nove esposizioni complessive. Ogni opera è cliccabile e mantiene il proprio collegamento alla sala di osservazione.
 
 L’elemento distintivo è il percorso guidato: stile, budget indicativo e occasione. Il sito suggerisce opere secondo gli stili selezionati e trasferisce tutte le preferenze al riepilogo di contatto. Budget e occasione sono informazioni per la galleria: non esiste un motore di valutazione economica.
 

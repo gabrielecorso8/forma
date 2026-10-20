@@ -48,3 +48,7 @@ La guida completa è in [docs/GUIDA.md](docs/GUIDA.md). I metadati interni dell�
 ## GitHub Pages
 
 La pubblicazione usa il ramo `main` e la cartella `/(root)`. `index.html`, JavaScript, CSS e `assets/` sono nella radice, pronti per essere pubblicati. `.nojekyll` mantiene il sito statico senza elaborazione Jekyll. I percorsi degli asset sono relativi, compatibili con `/forma/`.
+
+## Vetrina dinamica
+
+La testata mostra i tre verticali in rotazione sulla destra e i diciotto quadrati a coppie nell’area principale: 9 esposizioni complessive. Ogni opera ha una variazione leggera di entrata. Comandi manuali e pausa sono sempre visibili; la sequenza si sospende durante l’interazione con le opere, con una finestra aperta, in una scheda nascosta o quando la testata esce dallo schermo. Se il dispositivo richiede movimento ridotto, l’avvio è manuale. Il campo `showcaseInterval` in `config.js` imposta il tempo fra esposizioni, in millisecondi (9.000 predefiniti; minimo 6.000). I futuri lavori orizzontali con metadati `image.width / image.height > 1.2` occupano da soli l’area principale.

@@ -26,18 +26,77 @@
     return `<svg class="artwork" viewBox="${a.x} ${a.y} ${a.width} ${a.height}" preserveAspectRatio="xMidYMid ${fit}" style="--native-width:${a.width}px;--native-height:${a.height}px" role="img" aria-label="${esc(w.title)}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${clip}" clipPathUnits="userSpaceOnUse"><rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" fill="white" stroke="none"/></clipPath></defs><image href="${esc(a.src)}" width="${a.sheetWidth}" height="${a.sheetHeight}" clip-path="url(#${clip})" /></svg>`;
   };
   const saveButton = w => `<button class="save" data-save="${esc(w.id)}" aria-pressed="${saved.has(w.id)}" aria-label="${saved.has(w.id) ? 'Rimuovi' : 'Salva'} ${esc(w.title)} ${saved.has(w.id) ? 'dalle' : 'tra le'} preferite">${icon('heart')}<span>${saved.has(w.id) ? 'Salvata' : 'Salva'}</span></button>`;
-  let exhibitIndex = 0;
   let viewState = { index: 0, zoom: 1, x: 0, y: 0, dark: false };
-  function renderExhibit(index) {
-    exhibitIndex = index;
-    const w = works[index];
-    $('#hero-title').textContent = w.title;
-    $('#hero-number').textContent = `${String(index + 1).padStart(2, '0')} — ${String(Math.min(3,works.length)).padStart(2, '0')}`;
-    $('#hero-medium').innerHTML = `${esc(w.medium)}<br>${esc(w.size)}`;
-    $('#hero-art').innerHTML = image(w,'meet');
-    ['#hero-art','#hero-open','#hero-expand'].forEach(s => $(s).dataset.detail = w.id);
-    $('#hero-art').setAttribute('aria-label', `Apri ${w.title} nella vista immersiva`);
-    $$('[data-exhibit]').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.exhibit) === index));
+  const showcase = $('#inizio');
+  const showcaseGrid = $('.showcase-grid');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const aspectOf = w => w.image ? w.image.width / w.image.height : 0.5;
+  const portraitWorks = works.filter(w => aspectOf(w) < 0.8);
+  const mainWorks = works.filter(w => aspectOf(w) >= 0.8);
+  const showcaseScenes = [];
+  let pair = [];
+  const flushPair = () => { if(pair.length) { showcaseScenes.push(pair); pair = []; } };
+  mainWorks.forEach(w => { if(aspectOf(w) > 1.2) { flushPair(); showcaseScenes.push([w]); } else { pair.push(w); if(pair.length===2) flushPair(); } });
+  flushPair();
+  if(!showcaseScenes.length) showcaseScenes.push([]);
+  const sceneCount = Math.max(showcaseScenes.length, portraitWorks.length);
+  const showcaseInterval = Math.max(6000, Number(config.showcaseInterval) || 9000);
+  let showcaseIndex = 0, showcaseTimer = null, showcaseChanging = false;
+  let showcasePlaying = !reducedMotion.matches, showcaseVisible = true, showcaseHovered = false;
+  function canShowcaseAdvance() {
+    return showcasePlaying && showcaseVisible && !showcaseHovered && !document.hidden && !dialog.open && !showcaseGrid.contains(document.activeElement) && sceneCount>1;
+  }
+  function scheduleShowcase() {
+    clearTimeout(showcaseTimer);
+    showcaseTimer = null;
+    if(canShowcaseAdvance()) showcaseTimer = setTimeout(()=>moveShowcase(1,true),showcaseInterval);
+  }
+  function showcaseWork(w, slot, portrait=false) {
+    const n = works.indexOf(w);
+    const offsets = [[-12,0],[0,14],[12,0],[0,-12],[-8,8],[8,-8]];
+    const [x,y] = offsets[n % offsets.length];
+    const motion = `--entry-x:${x}px;--entry-y:${y}px;--entry-scale:${n%3===0?0.985:1};--entry-duration:${700+n*11}ms;--entry-delay:${slot*90+(n*7)%90}ms`;
+    return `<figure class="showcase-work${portrait?' is-portrait':''}" style="${motion}"><button data-detail="${esc(w.id)}" aria-label="Osserva ${esc(w.title)}"><span class="showcase-picture">${image(w,'meet')}</span><span class="showcase-work-caption"><strong>${esc(w.title)}</strong><small>${esc(w.category)} / ${esc(w.size)}</small><span class="showcase-open-mark" aria-hidden="true">↗</span></span></button></figure>`;
+  }
+  function renderShowcase(manual=false) {
+    const current = showcaseScenes[showcaseIndex % showcaseScenes.length];
+    const portrait = portraitWorks.length ? portraitWorks[showcaseIndex % portraitWorks.length] : null;
+    $('#showcase-pair').innerHTML = current.map((w,i)=>showcaseWork(w,i)).join('');
+    $('#showcase-pair').classList.toggle('is-single',current.length===1);
+    $('#showcase-pair').classList.toggle('is-landscape',current.length===1 && aspectOf(current[0])>1.2);
+    $('#showcase-portrait').innerHTML = portrait ? showcaseWork(portrait,2,true) : '';
+    showcaseGrid.classList.toggle('without-portrait',!portrait);
+    showcaseGrid.classList.toggle('without-main',!current.length);
+    $('#showcase-count').textContent = `${String(showcaseIndex+1).padStart(2,'0')} / ${String(sceneCount).padStart(2,'0')}`;
+    $('#showcase-count').setAttribute('aria-label',`Esposizione ${showcaseIndex+1} di ${sceneCount}`);
+    if(manual) $('#showcase-announcement').textContent = [...current,portrait].filter(Boolean).map(w=>w.title).join(', ');
+    showcaseGrid.classList.remove('is-changing');
+    showcaseChanging = false;
+    scheduleShowcase();
+  }
+  function moveShowcase(direction,automatic=false) {
+    if(showcaseChanging || (automatic && !canShowcaseAdvance())) return;
+    clearTimeout(showcaseTimer);
+    showcaseChanging = true;
+    showcaseGrid.classList.add('is-changing');
+    setTimeout(()=>{showcaseIndex=(showcaseIndex+direction+sceneCount)%sceneCount;renderShowcase(!automatic);},reducedMotion.matches?0:180);
+  }
+  function updateShowcasePlayback() {
+    $('#showcase-play-label').textContent = showcasePlaying ? 'Pausa' : 'Riprendi';
+    $('#showcase-play-icon').textContent = showcasePlaying ? 'Ⅱ' : '▷';
+    $('[data-showcase="toggle"]').setAttribute('aria-label',showcasePlaying?'Metti in pausa lo scorrimento automatico':'Avvia lo scorrimento automatico');
+    scheduleShowcase();
+  }
+  function startShowcase() {
+    updateShowcasePlayback();renderShowcase();
+    showcaseGrid.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'){showcaseHovered=true;scheduleShowcase();}});
+    showcaseGrid.addEventListener('pointerleave',()=>{showcaseHovered=false;scheduleShowcase();});
+    showcaseGrid.addEventListener('focusin',scheduleShowcase);
+    showcaseGrid.addEventListener('focusout',()=>queueMicrotask(scheduleShowcase));
+    document.addEventListener('visibilitychange',scheduleShowcase);
+    dialog.addEventListener('close',scheduleShowcase);
+    reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)showcasePlaying=false;updateShowcasePlayback();});
+    if('IntersectionObserver' in window) new IntersectionObserver(entries=>{showcaseVisible=entries[0].isIntersecting;scheduleShowcase();},{threshold:0}).observe(showcase);
   }
   function notify(message) { $('.toast').textContent = message; $('.toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('.toast').classList.remove('visible'), 3000); }
   function updateCounts() { $$('.count').forEach(el => el.textContent = saved.size); }
@@ -61,7 +120,7 @@
     if (dialog.dataset.view === 'saved') renderSaved();
     notify(saved.has(id) ? 'Opera aggiunta alle tue preferite' : 'Opera rimossa dalle preferite');
   }
-  function open(view, html) { dialog.classList.toggle('viewer', view === 'detail'); dialog.dataset.view = view; body.innerHTML = html; if (!dialog.open) dialog.showModal(); const heading = $('#dialog-title'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({preventScroll:true}); } dialog.scrollTop = 0; }
+  function open(view, html) { clearTimeout(showcaseTimer); dialog.classList.toggle('viewer', view === 'detail'); dialog.dataset.view = view; body.innerHTML = html; if (!dialog.open) dialog.showModal(); const heading = $('#dialog-title'); if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({preventScroll:true}); } dialog.scrollTop = 0; }
   function detail(id) {
     const index = works.findIndex(w => w.id === id); if (index < 0) return;
     viewState = {index, zoom:1, x:0, y:0, dark:viewState.dark};
@@ -135,7 +194,7 @@
   document.addEventListener('click', async e => {
     const target = e.target.closest('button,a'); if (!target) return;
     if (target.dataset.view) return viewerAction(target.dataset.view);
-    if (target.dataset.exhibit !== undefined) return renderExhibit(Number(target.dataset.exhibit));
+    if(target.dataset.showcase) { if(target.dataset.showcase==='toggle'){showcasePlaying=!showcasePlaying;updateShowcasePlayback();}else moveShowcase(target.dataset.showcase==='next'?1:-1);return; }
     if (target.dataset.save) { toggleSaved(target.dataset.save); if(dialog.dataset.view === 'detail') { const w = works.find(w=>w.id===target.dataset.save); if(w) target.innerHTML = `${icon('heart')} ${saved.has(w.id) ? 'Salvata' : 'Salva l’opera'}`; } return; }
     if (target.dataset.detail) return detail(target.dataset.detail);
     if (target.dataset.inquire) return contact(target.dataset.inquire);
@@ -173,5 +232,5 @@
   document.addEventListener('keydown',e=>{if(dialog.open&&dialog.dataset.view==='detail'&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){if(e.key==='ArrowRight'){e.preventDefault();viewerAction('next');}if(e.key==='ArrowLeft'){e.preventDefault();viewerAction('previous');}}});
   $('.sup').textContent=`01—${String(works.length).padStart(2,'0')}`;
   $('#collection-summary').textContent=`${works.length} opere, 3 categorie.`;
-  $('#year').textContent = new Date().getFullYear(); updateCounts(); renderWorks(); renderExhibit(0);
+  $('#year').textContent = new Date().getFullYear(); updateCounts(); renderWorks(); startShowcase();
 })();
