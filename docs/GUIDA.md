@@ -57,7 +57,7 @@ Per una messa online commerciale: sostituire il catalogo, inserire identità e r
 
 Il sito è HTML/CSS/JavaScript statico: nessuna installazione o compilazione. Aprire `dist/index.html` per una consultazione locale oppure servire la cartella `dist` su un hosting statico. Per clipboard e comportamento di archiviazione più uniforme, usare HTTP locale o HTTPS.
 
-La cartella `.openai` contiene l’identità del progetto Sites usata per questa demo. Per distribuire il sito su altri servizi è sufficiente la cartella `dist`. Non sono presenti chiavi API o credenziali applicative.
+La repository GitHub esclude la cartella `.openai`, che contiene i metadati interni della pubblicazione Sites. Per distribuire il sito è sufficiente la cartella `dist`. Non sono presenti chiavi API o credenziali applicative.
 
 ## Verifiche effettuate
 
